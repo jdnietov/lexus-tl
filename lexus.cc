@@ -4,122 +4,191 @@
 #include <string>
 #include "lextoken.h"
 
+#define ESTADO_INICIAL 0
+#define ESTADO_STRING 1
+#define ESTADO_ID 2
+
 using namespace std;
 
-/** KEYWORDS
- * log
- * false
- * true
- * importar
- * for
+/**
+ * UNCOVERED CASES:
+ * two-character operators
  * in
- * if
- * funcion
- * retorno
- * end
- * while
-*/
+ * */
+
+bool is_number(char c) {
+    int ic = int(c);
+    return ic >= 48 && ic <= 57;
+}
+
+bool is_letter(char c) {
+    int ic = int(c);
+    if(ic > 90)  ic -= 32;
+    return ic >= 65 && ic <= 90;
+}
 
 int main (int argc, char *argv[]) { // TODO: get file by command line parameters
-    string line;
     ifstream code ("in01.txt");
     
     if (code.is_open()) {
-        string buffer = "";
-        
+        int state = ESTADO_INICIAL, nline = 1;
         queue<Token> tokens;
+        string line, buffer = "";
         
-        int nline = 1;
         while ( getline (code,line) ) {
-            for(int col = 0; col < line.length(); col++) {
-                char c = line[col];
-                bool found = false;
-                switch(c) {
-                    case ' ':
-                    case '\t':
-                    case '\n':
-                        break;
-                        
-                    case '{': 
+            line += '\n';
+            
+            int icol = 1;
+            for(int ncol = 1; ncol <= line.length(); ncol++) {
+                char c = line[ncol-1];
+                // cout << "line " << nline << ", reading " << c << '\n';
+                
+                // commentary - stop reading line, go to next
+                if(c == '#') {
+                    //Operator com(Token::TOKEN_COM, nline, ncol);
+                    //com.print();
+                    //tokens.push(com);
+                    break;
+                }
+                
+                string str_buffer = "";
+                switch(state) {
+                    case ESTADO_INICIAL:
                     {
-                        Operator llaveizq (Token::TOKEN_LLAVE_IZQ, nline, col+1);
-                        llaveizq.print();
-                    }
-                        break;
-                        
-                    case '}':
-                    {
-                        Operator llaveder (Token::TOKEN_LLAVE_DER, nline, col+1);
-                        llaveder.print();
-                    }
-                        break;
+                        switch(c) {
+                            case ' ':
+                            case '\t':
+                            case '\n':
+                                break;
+                            
+                            // one-character operators
+                            case '{':
+                            case '}':
+                            case '[':
+                            case ']':
+                            case '(':
+                            case ')':
+                            case '.':
+                            case '+':
+                            case '-':
+                            case '*':
+                            case '/':
+                            case '%':
+                            case '^':
+                                {
+                                    string s(1,c);
+                                    Operator op(Token::get_op_key(s), nline, ncol);
+                                    op.print();
+                                }
+                                break;
+                            
+                            case '<':
+                            case '>':
+                            case '=':
+                            case '&':
+                            case '!':
+                            case '|':
+                                {
+                                    string s = "";
+                                    s += c;
+                                    bool two_characters = false;
+                                    if(ncol+1 < line.length()) {
+                                        s += line[ncol];
+                                        two_characters = true;
+                                    }
+                                    
+                                    Operator op(Token::get_op_key(s), nline, ncol);
+                                    op.print();
+                                    
+                                    if(two_characters)
+                                        ncol++;
+                                }
+                                break;
+                            
+                            case 'i':
+                                {
+                                    if(line[ncol] == 'n') {
+                                        Operator op(Token::TOKEN_IN, nline, ncol);
+                                        op.print();
+                                    }
+                                }
+                            
+                            case '"':
+                                {
+                                    state = ESTADO_STRING;
+                                    icol = ncol;
+                                }
+                                break;
+                            
+                            default:
+                                break;
+                        }
                     
-                    case '#':   // TODO: caso del comentario!
-                    {
-                        Operator com (Token::TOKEN_COM, nline, col+1);
-                        com.print();
-                    }
-                        break;
+                        if(is_letter(c)) 
+                        {  // id
+                            state = ESTADO_ID;
+                            buffer += c;
+                            icol = ncol;
+                        }
                         
-                    case '[':
-                    {
-                        Operator corizq (Token::TOKEN_COR_IZQ, nline, col+1);
-                        corizq.print();
-                    }
-                        break;
+                        else if(is_number(c)) 
+                        { // number
+                            
+                        }
                         
-                    case ']':
-                    {
-                        Operator corder (Token::TOKEN_COR_DER, nline, col+1);
-                        corder.print();
-                    }
-                        break;
-                    
-                    case '(':
-                    {
-                        Operator parizq (Token::TOKEN_PAR_IZQ, nline, col+1);
-                        parizq.print();
-                    }
-                        break;
-                        
-                    case ')':
-                    {
-                        Operator parizq (Token::TOKEN_PAR_IZQ, nline, col+1);
-                        parizq.print();
-                    }
-                        break;
-                    
-                    case '>':
-                    {
-                        if(col+1 < line.length() && line[col+1] == '=') {
-                            Operator mayor_eq (Token::TOKEN_MAYOR_IG, nline, col+1);
-                            mayor_eq.print();
-                        } else {
-                            Operator mayor (Token::TOKEN_MAYOR, nline, col+1);
-                            mayor.print();
+                        else 
+                        {
+                            cout << "Error lexico(linea:" << nline << ",posicion" << ncol << ")\n";
                         }
                     }
-                        break;
-                        
-                    case '<':
+                    break;
+                    
+                    case ESTADO_STRING:
                     {
-                        if(col+1 < line.length() && line[col+1] == '=') {
-                            Operator menor_eq (Token::TOKEN_MENOR_IG, nline, col+1);
-                            menor_eq.print();
+                        switch(c) {
+                            case '"':
+                            {
+                                Lexeme str(Token::TOKEN_STRING, buffer, nline, icol);
+                                str.print();
+                               
+                                state = ESTADO_INICIAL;
+                                buffer = "";
+                            }
+                            break;
+                                
+                            default:
+                            {
+                                buffer += c;
+                            }
+                                break;
+                        }    
+                    }
+                    break;
+                    
+                    case ESTADO_ID:
+                    {
+                        if(is_letter(c) || is_number(c)) {  // still an id
+                            buffer += c;
                         } else {
-                            Operator menor (Token::TOKEN_MENOR_IG, nline, col+1);
-                            menor.print();
-                        };
+                            int key = ResWord::get_word_key(buffer);
+                            
+                            if(key == -1) {
+                                Lexeme word(Token::TOKEN_ID, buffer, nline, icol);
+                                word.print();
+                            } else {
+                                ResWord word(key, nline, icol);
+                                word.print();
+                            }
+                            
+                            --ncol;
+                            state = ESTADO_INICIAL;
+                            buffer = "";
+                        }
                     }
-                        break;
-                        
-                    // TODO el resto!
-                        
-                    case '+':
-                    {
-                        Operator addop (Token::TOKEN_MAS, nline, col+1);
-                        addop.print();
-                    }
+                    break;
+                    
+                    default:    // error - automaton experienced an error
+                        cout << "Error - we fucked up. Sorry!\n";
                         break;
                 }
             }
