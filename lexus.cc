@@ -12,12 +12,6 @@
 
 using namespace std;
 
-/**
- * UNCOVERED CASES:
- * two-character operators
- * in
- * */
-
 bool is_number(char c) {
     int ic = int(c);
     return ic >= 48 && ic <= 57;
@@ -90,9 +84,10 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                             case '/':
                             case '%':
                             case '^':
+                            case ':':
+                            case ',':
                             {
-                                string s(1,c);
-                                Operator op(Token::get_op_key(s), nline, ncol);
+                                Operator op(Token::get_op_key(c), nline, ncol);
                                 op.print();
                             }
                             break;
@@ -104,19 +99,23 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                             case '!':
                             case '|':
                             {
-                                string s = "";
-                                s += c;
-                                bool two_characters = false;
-                                if(ncol+1 < line.length()) {
-                                    s += line[ncol];
-                                    two_characters = true;
+                                int key;
+                                Operator op;
+                                op.set_line(nline);
+                                op.set_col(ncol);
+                                
+                                string s(line, ncol-1, 2);
+                                key = Token::get_comp_op_key(s);
+                                
+                                if(key != -1) {
+                                    op.set_type(key);
+                                    ncol++;
+                                } else if(Token::get_op_key(c) != -1) {
+                                    op.set_type(Token::get_op_key(c));
                                 }
                                 
-                                Operator op(Token::get_op_key(s), nline, ncol);
-                                op.print();
-                                
-                                if(two_characters)
-                                    ncol++;
+                                if(op.get_type() != -1)
+                                    op.print();
                             }
                             break;
                             
@@ -197,10 +196,11 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                             buffer += c;
                             state = ESTADO_FLOAT;
                         } else {
-                            Lexeme number(Token::TOKEN_INT, buffer, nline, ncol);
+                            Lexeme number(Token::TOKEN_INT, buffer, nline, icol);
                             number.print();
                             buffer = "";
                             state = ESTADO_INICIAL;
+                            --ncol;
                         }
                     }
                     break;

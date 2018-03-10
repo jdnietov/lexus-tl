@@ -1,10 +1,1 @@
-log("prueba del if")
-a= false
-b = true
-if a && b { $
-  log ("El resultado es verdadero")
-}
-# ignorar comentario ++-+-
-log("El valor es falso")
-
-c = 1234. <==
+vec={vec1:1,vec2:4,vec3:9}

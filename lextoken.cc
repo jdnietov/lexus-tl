@@ -5,7 +5,7 @@
 
 // https://stackoverflow.com/questions/5620256/understanding-how-to-correctly-treat-c-class-constants
 
-const int TOKENS = 30;
+const int TOKENS = 32;
 
 const int Token::TOKEN_LLAVE_IZQ = 1;   // {
 const int Token::TOKEN_LLAVE_DER = 2;   // }
@@ -37,6 +37,8 @@ const int Token::TOKEN_ID = 27;
 const int Token::TOKEN_RESWORD = 28;
 const int Token::TOKEN_INT = 29;
 const int Token::TOKEN_FLOAT = 30;
+const int Token::TOKEN_DOS_PUNTOS = 31;
+const int Token::TOKEN_COMMA = 32;
 
 const std::string TYPE2STR [TOKENS] =
     { "token_llave_izq", "token_llave_der", "token_comentario",
@@ -45,33 +47,36 @@ const std::string TYPE2STR [TOKENS] =
     "token_in", "token_igual_num", "token_point", "token_diff_num",
     "token_and", "token_or", "token_not", "token_mas", "token_menos", 
     "token_mul", "token_div", "token_mod", "token_pod", "token_assign",
-    "token_string", "id", "token_reserved_word", "int", "float" };
+    "token_string", "id", "token_reserved_word", "int", "float", 
+    "token_dos_puntos", "token_comma" };
     
 std::string Token::type2str(int type) {
     type--;
     return (type >= 0 && type < TOKENS) ? TYPE2STR[type] : "ERROR_TKN";
 }
 
-int Token::get_op_key(std::string s) {
-    if(s.length() > 1) {
-        if(s == ">=") {
-            return Token::TOKEN_MAYOR_IG;
-        } if(s == "<=") {
-            return Token::TOKEN_MENOR_IG;
-        } if(s == "==") {
-            return Token::TOKEN_IGUAL_NUM;
-        } if(s == "!=") {
-            return Token::TOKEN_DIFF_NUM;
-        } if(s == "&&") {
-            return Token::TOKEN_AND;
-        } if(s == "||") {
-            return Token::TOKEN_OR;
-        } if(s == "in") {
-            return Token::TOKEN_IN;
-        }
+int Token::get_comp_op_key(std::string s) {
+    if(s == ">=") {
+        return Token::TOKEN_MAYOR_IG;
+    } if(s == "<=") {
+        return Token::TOKEN_MENOR_IG;
+    } if(s == "==") {
+        return Token::TOKEN_IGUAL_NUM;
+    } if(s == "!=") {
+        return Token::TOKEN_DIFF_NUM;
+    } if(s == "&&") {
+        return Token::TOKEN_AND;
+    } if(s == "||") {
+        return Token::TOKEN_OR;
+    } if(s == "in") {
+        return Token::TOKEN_IN;
     }
-    
-    switch(s[0]) {  // check first character
+        
+    return -1;
+}
+
+int Token::get_op_key(char c) {
+    switch(c) {  // check first character
         case '{':
             return Token::TOKEN_LLAVE_IZQ;
         case '}':
@@ -104,9 +109,14 @@ int Token::get_op_key(std::string s) {
             return Token::TOKEN_POD;
         case '=':
             return Token::TOKEN_ASSIGN;
+        case ':':
+            return Token::TOKEN_DOS_PUNTOS;
+        case ',':
+            return Token::TOKEN_COMMA;
         default:
             return -1;
     }
+    
 }
 
 Token::Token(int t, int l, int c) {
@@ -129,7 +139,7 @@ void Lexeme::print() {
     std::cout << "<" << Token::type2str(type) << "," << lexeme << "," << line << "," << col << ">\n";
 }
 
-const int ResWord::N_RWORDS = 11;
+const int ResWord::N_RWORDS = 10;
 
 const int ResWord::RWORD_LOG = 1;
 const int ResWord::RWORD_FALSE = 2;
@@ -144,7 +154,7 @@ const int ResWord::RWORD_WHILE = 10;
 
 std::string ResWord::RESWORDS [ResWord::N_RWORDS] = {
     "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
-    "end, while"
+    "end", "while"
 };
 
 int ResWord::get_word_key(std::string word) {    // TODO: optimizar

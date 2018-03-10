@@ -43,6 +43,8 @@ class Token {
         static const int TOKEN_RESWORD;
         static const int TOKEN_INT;
         static const int TOKEN_FLOAT;
+        static const int TOKEN_DOS_PUNTOS;
+        static const int TOKEN_COMMA;
         
         Token();
         Token(int t, int l, int c);
@@ -57,8 +59,19 @@ class Token {
             col = c;
         }
         
+        int get_type() {
+            return type;
+        }
+        int get_line() {
+            return line;
+        }
+        int get_col() {
+            return col;
+        }
+        
         static bool is_operator(char c);
-        static int get_op_key(std::string c);
+        static int get_op_key(char c);
+        static int get_comp_op_key(std::string c);
         
         static std::string type2str(int type);
 };
@@ -66,6 +79,10 @@ class Token {
 class Operator: public Token {
     public:
         Operator(int t, int l, int c) : Token(t, l, c) {
+            
+        }
+        
+        Operator() : Token() {
             
         }
         void print();
