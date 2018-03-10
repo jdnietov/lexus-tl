@@ -45,9 +45,6 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                 
                 // commentary - stop reading line, go to next
                 if(c == '#') {
-                    //Operator com(Token::TOKEN_COM, nline, ncol);
-                    //com.print();
-                    //tokens.push(com);
                     break;
                 }
                 
@@ -55,7 +52,21 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                 switch(state) {
                     case ESTADO_INICIAL:
                     {
-                        switch(c) {
+                        if(is_letter(c)) 
+                        {  // id
+                            state = ESTADO_ID;
+                            buffer += c;
+                            icol = ncol;
+                        }
+                        
+                        else if(is_number(c)) 
+                        { // number
+                            
+                        }
+                        
+                        else 
+                        {
+                            switch(c) {
                             case ' ':
                             case '\t':
                             case '\n':
@@ -112,6 +123,7 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                                         op.print();
                                     }
                                 }
+                                break;
                             
                             case '"':
                                 {
@@ -121,24 +133,9 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                                 break;
                             
                             default:
+                                cout << "Error lexico(linea:" << nline << ",posicion" << ncol << ")\n";
                                 break;
-                        }
-                    
-                        if(is_letter(c)) 
-                        {  // id
-                            state = ESTADO_ID;
-                            buffer += c;
-                            icol = ncol;
-                        }
-                        
-                        else if(is_number(c)) 
-                        { // number
-                            
-                        }
-                        
-                        else 
-                        {
-                            cout << "Error lexico(linea:" << nline << ",posicion" << ncol << ")\n";
+                            }
                         }
                     }
                     break;
