@@ -137,7 +137,8 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                             break;
                             
                             default:
-                                cout << "Error lexico(linea:" << nline << ",posicion" << ncol << ")\n";
+                                cout << "Error lexico(linea:" << nline << ",posicion:" << ncol << ")\n";
+                                return -1;
                                 break;
                             }
                         }
