@@ -6,3 +6,5 @@ if a && b {
 }
 # ignorar comentario ++-+-
 log("El valor es falso")
+
+c = 1234. <==

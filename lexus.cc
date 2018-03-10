@@ -7,6 +7,8 @@
 #define ESTADO_INICIAL 0
 #define ESTADO_STRING 1
 #define ESTADO_ID 2
+#define ESTADO_INT 3
+#define ESTADO_FLOAT 4
 
 using namespace std;
 
@@ -53,15 +55,17 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                     case ESTADO_INICIAL:
                     {
                         if(is_letter(c)) 
-                        {  // id
+                        {
                             state = ESTADO_ID;
                             buffer += c;
                             icol = ncol;
                         }
                         
                         else if(is_number(c)) 
-                        { // number
-                            
+                        {
+                            state = ESTADO_INT;
+                            buffer += c;
+                            icol = ncol;
                         }
                         
                         else 
@@ -86,12 +90,12 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                             case '/':
                             case '%':
                             case '^':
-                                {
-                                    string s(1,c);
-                                    Operator op(Token::get_op_key(s), nline, ncol);
-                                    op.print();
-                                }
-                                break;
+                            {
+                                string s(1,c);
+                                Operator op(Token::get_op_key(s), nline, ncol);
+                                op.print();
+                            }
+                            break;
                             
                             case '<':
                             case '>':
@@ -99,38 +103,38 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                             case '&':
                             case '!':
                             case '|':
-                                {
-                                    string s = "";
-                                    s += c;
-                                    bool two_characters = false;
-                                    if(ncol+1 < line.length()) {
-                                        s += line[ncol];
-                                        two_characters = true;
-                                    }
-                                    
-                                    Operator op(Token::get_op_key(s), nline, ncol);
-                                    op.print();
-                                    
-                                    if(two_characters)
-                                        ncol++;
+                            {
+                                string s = "";
+                                s += c;
+                                bool two_characters = false;
+                                if(ncol+1 < line.length()) {
+                                    s += line[ncol];
+                                    two_characters = true;
                                 }
-                                break;
+                                
+                                Operator op(Token::get_op_key(s), nline, ncol);
+                                op.print();
+                                
+                                if(two_characters)
+                                    ncol++;
+                            }
+                            break;
                             
                             case 'i':
-                                {
-                                    if(line[ncol] == 'n') {
-                                        Operator op(Token::TOKEN_IN, nline, ncol);
-                                        op.print();
-                                    }
+                            {
+                                if(line[ncol] == 'n') {
+                                    Operator op(Token::TOKEN_IN, nline, ncol);
+                                    op.print();
                                 }
-                                break;
+                            }
+                            break;
                             
                             case '"':
-                                {
-                                    state = ESTADO_STRING;
-                                    icol = ncol;
-                                }
-                                break;
+                            {
+                                state = ESTADO_STRING;
+                                icol = ncol;
+                            }
+                            break;
                             
                             default:
                                 cout << "Error lexico(linea:" << nline << ",posicion" << ncol << ")\n";
@@ -180,6 +184,36 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                             --ncol;
                             state = ESTADO_INICIAL;
                             buffer = "";
+                        }
+                    }
+                    break;
+                    
+                    case ESTADO_INT:
+                    {
+                        if (is_number(c)) {
+                            buffer += c;
+                        } else if(c == '.') {
+                            buffer += c;
+                            state = ESTADO_FLOAT;
+                        } else {
+                            Lexeme number(Token::TOKEN_INT, buffer, nline, ncol);
+                            number.print();
+                            buffer = "";
+                            state = ESTADO_INICIAL;
+                        }
+                    }
+                    break;
+                    
+                    case ESTADO_FLOAT:  // TODO - read if next char is number too!
+                    {
+                        if (is_number(c)) {
+                            buffer += c;
+                        } else {
+                            Lexeme flt(Token::TOKEN_FLOAT, buffer, nline, ncol);
+                            flt.print();
+                            
+                            buffer = "";
+                            state = ESTADO_INICIAL;
                         }
                     }
                     break;

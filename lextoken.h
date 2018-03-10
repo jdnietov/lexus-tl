@@ -41,6 +41,8 @@ class Token {
         static const int TOKEN_STRING;
         static const int TOKEN_ID;
         static const int TOKEN_RESWORD;
+        static const int TOKEN_INT;
+        static const int TOKEN_FLOAT;
         
         Token();
         Token(int t, int l, int c);

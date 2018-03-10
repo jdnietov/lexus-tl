@@ -5,7 +5,7 @@
 
 // https://stackoverflow.com/questions/5620256/understanding-how-to-correctly-treat-c-class-constants
 
-const int TOKENS = 28;
+const int TOKENS = 30;
 
 const int Token::TOKEN_LLAVE_IZQ = 1;   // {
 const int Token::TOKEN_LLAVE_DER = 2;   // }
@@ -35,6 +35,8 @@ const int Token::TOKEN_ASSIGN = 25;
 const int Token::TOKEN_STRING = 26;
 const int Token::TOKEN_ID = 27;
 const int Token::TOKEN_RESWORD = 28;
+const int Token::TOKEN_INT = 29;
+const int Token::TOKEN_FLOAT = 30;
 
 const std::string TYPE2STR [TOKENS] =
     { "token_llave_izq", "token_llave_der", "token_comentario",
@@ -43,7 +45,7 @@ const std::string TYPE2STR [TOKENS] =
     "token_in", "token_igual_num", "token_point", "token_diff_num",
     "token_and", "token_or", "token_not", "token_mas", "token_menos", 
     "token_mul", "token_div", "token_mod", "token_pod", "token_assign",
-    "token_string", "id", "token_reserved_word" };
+    "token_string", "id", "token_reserved_word", "int", "float" };
     
 std::string Token::type2str(int type) {
     type--;
