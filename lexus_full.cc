@@ -21,6 +21,8 @@ class Token {
         int TYPES[];
         
     public:
+        static const int TOKENS;
+
         static const int TOKEN_LLAVE_IZQ;
         static const int TOKEN_LLAVE_DER;
         static const int TOKEN_COM;
@@ -84,6 +86,62 @@ class Token {
         static std::string type2str(int type);
 };
 
+const int Token::TOKENS = 31;
+
+const int Token::TOKEN_LLAVE_IZQ = 1;   // {
+const int Token::TOKEN_LLAVE_DER = 2;   // }
+const int Token::TOKEN_COM = 3;         // #
+const int Token::TOKEN_COR_IZQ = 4;     // [
+const int Token::TOKEN_COR_DER = 5;     // ]
+const int Token::TOKEN_PAR_IZQ = 6;     // (
+const int Token::TOKEN_PAR_DER = 7;     // )
+const int Token::TOKEN_MAYOR = 8;       // >
+const int Token::TOKEN_MENOR = 9;       // <
+const int Token::TOKEN_MAYOR_IG = 10;   // >=
+const int Token::TOKEN_MENOR_IG = 11;   // <=
+const int Token::TOKEN_IGUAL_NUM = 12;  // ==
+const int Token::TOKEN_POINT = 13;      // .
+const int Token::TOKEN_DIFF_NUM = 14;   // !=
+const int Token::TOKEN_AND = 15;        // &&
+const int Token::TOKEN_OR = 16;         // 
+const int Token::TOKEN_NOT = 17;
+const int Token::TOKEN_MAS = 18;
+const int Token::TOKEN_MENOS = 19;
+const int Token::TOKEN_MUL = 20;
+const int Token::TOKEN_DIV = 21;
+const int Token::TOKEN_MOD = 22;
+const int Token::TOKEN_POD = 23;
+const int Token::TOKEN_ASSIGN = 24;
+const int Token::TOKEN_STRING = 25;
+const int Token::TOKEN_ID = 26;
+const int Token::TOKEN_RESWORD = 27;
+const int Token::TOKEN_INT = 28;
+const int Token::TOKEN_FLOAT = 29;
+const int Token::TOKEN_DOS_PUNTOS = 30;
+const int Token::TOKEN_COMMA = 31;
+
+const std::string TYPE2STR [Token::TOKENS] =
+    { "token_llave_izq", "token_llave_der", "token_comentario",
+    "token_cor_izq", "token_cor_der", "token_par_izq", "token_par_der",
+    "token_mayor", "token_menor", "token_mayor_igual", "token_menor_igual",
+    "token_igual_num", "token_point", "token_diff_num",
+    "token_and", "token_or", "token_not", "token_mas", "token_menos", 
+    "token_mul", "token_div", "token_mod", "token_pot", "token_assign",
+    "token_string", "id", "token_reserved_word", "token_integer", "token_float", 
+    "token_dosp", "token_coma" };
+
+Token::Token(int t, int l, int c) {
+    type = t;
+    line = l;
+    col = c;
+}
+
+Token::Token() {
+    type = -1;
+    line = -1;
+    col = -1;
+}
+
 class Operator: public Token {
     public:
         Operator(int t, int l, int c) : Token(t, l, c) {
@@ -143,53 +201,12 @@ class ResWord: public Token {
         void print();
 };
 
-const int TOKENS = 31;
 
-const int Token::TOKEN_LLAVE_IZQ = 1;   // {
-const int Token::TOKEN_LLAVE_DER = 2;   // }
-const int Token::TOKEN_COM = 3;         // #
-const int Token::TOKEN_COR_IZQ = 4;     // [
-const int Token::TOKEN_COR_DER = 5;     // ]
-const int Token::TOKEN_PAR_IZQ = 6;     // (
-const int Token::TOKEN_PAR_DER = 7;     // )
-const int Token::TOKEN_MAYOR = 8;       // >
-const int Token::TOKEN_MENOR = 9;       // <
-const int Token::TOKEN_MAYOR_IG = 10;   // >=
-const int Token::TOKEN_MENOR_IG = 11;   // <=
-const int Token::TOKEN_IGUAL_NUM = 12;  // ==
-const int Token::TOKEN_POINT = 13;      // .
-const int Token::TOKEN_DIFF_NUM = 14;   // !=
-const int Token::TOKEN_AND = 15;        // &&
-const int Token::TOKEN_OR = 16;         // 
-const int Token::TOKEN_NOT = 17;
-const int Token::TOKEN_MAS = 18;
-const int Token::TOKEN_MENOS = 19;
-const int Token::TOKEN_MUL = 20;
-const int Token::TOKEN_DIV = 21;
-const int Token::TOKEN_MOD = 22;
-const int Token::TOKEN_POD = 23;
-const int Token::TOKEN_ASSIGN = 24;
-const int Token::TOKEN_STRING = 25;
-const int Token::TOKEN_ID = 26;
-const int Token::TOKEN_RESWORD = 27;
-const int Token::TOKEN_INT = 28;
-const int Token::TOKEN_FLOAT = 29;
-const int Token::TOKEN_DOS_PUNTOS = 30;
-const int Token::TOKEN_COMMA = 31;
 
-const std::string TYPE2STR [TOKENS] =
-    { "token_llave_izq", "token_llave_der", "token_comentario",
-    "token_cor_izq", "token_cor_der", "token_par_izq", "token_par_der",
-    "token_mayor", "token_menor", "token_mayor_igual", "token_menor_igual",
-    "token_igual_num", "token_point", "token_diff_num",
-    "token_and", "token_or", "token_not", "token_mas", "token_menos", 
-    "token_mul", "token_div", "token_mod", "token_pot", "token_assign",
-    "token_string", "id", "token_reserved_word", "token_integer", "token_float", 
-    "token_dosp", "token_coma" };
     
 std::string Token::type2str(int type) {
     type--;
-    return (type >= 0 && type < TOKENS) ? TYPE2STR[type] : "ERROR_TKN";
+    return (type >= 0 && type < Token::TOKENS) ? TYPE2STR[type] : "ERROR_TKN";
 }
 
 int Token::get_comp_op_key(std::string s) {
@@ -256,18 +273,6 @@ int Token::get_op_key(char c) {
             return -1;
     }
     
-}
-
-Token::Token(int t, int l, int c) {
-    type = t;
-    line = l;
-    col = c;
-}
-
-Token::Token() {
-    type = -1;
-    line = -1;
-    col = -1;
 }
 
 void Operator::print() {
