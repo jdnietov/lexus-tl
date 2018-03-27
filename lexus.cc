@@ -23,15 +23,19 @@ bool is_letter(char c) {
     return ic >= 65 && ic <= 90;
 }
 
+void catch_error_lexico(int line, int col) {
+    cout << "Error lexico(linea:" << line << ",posicion:" << col << ")\n";
+}
+
 int main (int argc, char *argv[]) { // TODO: get file by command line parameters
-    ifstream code ("in01.txt");
+    // ifstream code ("in01.txt");
     
-    if (code.is_open()) {
+    // if (code.is_open()) {
         int state = ESTADO_INICIAL, nline = 1;
         queue<Token> tokens;
         string line, buffer = "";
         
-        while ( getline (code,line) ) {
+        while ( getline (cin,line) ) {
             line += '\n';
             
             int icol = 1;
@@ -136,7 +140,7 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
                             break;
                             
                             default:
-                                cout << "Error lexico(linea:" << nline << ",posicion:" << ncol << ")\n";
+                                catch_error_lexico(nline, ncol);
                                 return -1;
                                 break;
                             }
@@ -226,10 +230,14 @@ int main (int argc, char *argv[]) { // TODO: get file by command line parameters
             }
             nline++;
         }
-        code.close();
-    }
+        
+        if(state != ESTADO_INICIAL)
+            catch_error_lexico(nline-1, line.length());
+            
+        //code.close();
+    //}
 
-    else cout << "No fue posible abrir el archivo." << '\n'; 
+    //else cout << "No fue posible abrir el archivo." << '\n'; 
 
     return 0;
 }

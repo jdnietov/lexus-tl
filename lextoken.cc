@@ -81,6 +81,10 @@ int Token::get_op_key(char c) {
             return Token::TOKEN_LLAVE_IZQ;
         case '}':
             return Token::TOKEN_LLAVE_DER;
+        case '[':
+            return Token::TOKEN_COR_IZQ;
+        case ']':
+            return Token::TOKEN_COR_DER;
         case '#':
             return Token::TOKEN_COM;
         case '(':
