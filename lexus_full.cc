@@ -1,4 +1,5 @@
 #include <iostream>
+#include <queue>
 #include <stdlib.h>
 #include <string>
 
@@ -15,6 +16,7 @@ using namespace std;
 //
 
 int global_state, global_line_it, global_col_it;
+string global_line;
 
 bool is_number(char c) {
     int ic = int(c);
@@ -44,53 +46,81 @@ void catch_error_lexico(int line, int col) {
 
 class Token {
     protected:
+        string lexeme;
+        int t_class;
         int type;
         int line;
         int col;
         
-    private:    // TODO
-        static const string TYPES[];
-        
     public:
-        static const int TOKENS;
+        static const int N_TOKENS = 31;
+        static const int N_RWORDS = 16;
 
-        static const int TOKEN_LLAVE_IZQ;
-        static const int TOKEN_LLAVE_DER;
-        static const int TOKEN_COM;
-        static const int TOKEN_COR_IZQ;
-        static const int TOKEN_COR_DER;
-        static const int TOKEN_PAR_IZQ;
-        static const int TOKEN_PAR_DER;
-        static const int TOKEN_MAYOR;
-        static const int TOKEN_MENOR;
-        static const int TOKEN_MAYOR_IG;
-        static const int TOKEN_MENOR_IG;
-        static const int TOKEN_IN;
-        static const int TOKEN_IGUAL_NUM;
-        static const int TOKEN_POINT;
-        static const int TOKEN_DIFF_NUM;
-        static const int TOKEN_AND;
-        static const int TOKEN_OR;
-        static const int TOKEN_NOT;
-        static const int TOKEN_MAS;
-        static const int TOKEN_MENOS;
-        static const int TOKEN_MUL;
-        static const int TOKEN_DIV;
-        static const int TOKEN_MOD;
-        static const int TOKEN_POD;
-        static const int TOKEN_ASSIGN;
-        static const int TOKEN_STRING;
-        static const int TOKEN_ID;
-        static const int TOKEN_RESWORD;
-        static const int TOKEN_INT;
-        static const int TOKEN_FLOAT;
-        static const int TOKEN_DOS_PUNTOS;
-        static const int TOKEN_COMMA;
+        static const int TOKEN_LLAVE_IZQ = 1;   // {
+        static const int TOKEN_LLAVE_DER = 2;   // }
+        static const int TOKEN_COM = 3;         // #
+        static const int TOKEN_COR_IZQ = 4;     // [
+        static const int TOKEN_COR_DER = 5;     // ]
+        static const int TOKEN_PAR_IZQ = 6;     // (
+        static const int TOKEN_PAR_DER = 7;     // )
+        static const int TOKEN_MAYOR = 8;       // >
+        static const int TOKEN_MENOR = 9;       // <
+        static const int TOKEN_MAYOR_IG = 10;   // >=
+        static const int TOKEN_MENOR_IG = 11;   // <=
+        static const int TOKEN_IGUAL_NUM = 12;  // ==
+        static const int TOKEN_POINT = 13;      // .
+        static const int TOKEN_DIFF_NUM = 14;   // !=
+        static const int TOKEN_AND = 15;        // &&
+        static const int TOKEN_OR = 16;         // 
+        static const int TOKEN_NOT = 17;
+        static const int TOKEN_MAS = 18;
+        static const int TOKEN_MENOS = 19;
+        static const int TOKEN_MUL = 20;
+        static const int TOKEN_DIV = 21;
+        static const int TOKEN_MOD = 22;
+        static const int TOKEN_POD = 23;
+        static const int TOKEN_ASSIGN = 24;
+        static const int TOKEN_STRING = 25;
+        static const int TOKEN_ID = 26;
+        static const int TOKEN_RESWORD = 27;
+        static const int TOKEN_INT = 28;
+        static const int TOKEN_FLOAT = 29;
+        static const int TOKEN_DOS_PUNTOS = 30;
+        static const int TOKEN_COMMA = 31;
+        
+        static const int RWORD_LOG = 1;
+        static const int RWORD_FALSE = 2;
+        static const int RWORD_TRUE = 3;
+        static const int RWORD_IMPORTAR = 4;
+        static const int RWORD_FOR = 5;
+        static const int RWORD_IF = 6;
+        static const int RWORD_FUNCION = 7;
+        static const int RWORD_RETORNO = 8;
+        static const int RWORD_END = 9;
+        static const int RWORD_WHILE = 10;
+        static const int RWORD_ELIF = 11;
+        static const int RWORD_ELSE = 12;
+        static const int RWORD_IN = 13;
+        static const int RWORD_DESDE = 14;
+        static const int RWORD_TODO = 15;
+        static const int RWORD_NIL = 16;
+
+        static const int T_OP = 1;
+        static const int T_LEX = 2;
+        static const int T_RES = 3;
         
         Token();
-        Token(int t, int l, int c);
+        Token(int cla);
+        Token(int cla, int key, int lin, int co);
+        Token(int cla, int key, string lex, int lin, int co);
         
         void print();
+        static int get_op_key(char c);
+        static int get_op_comp_key(string c);
+        static int get_res_word_key(string word);
+        static string get_res_word(int idx);
+        static string type2str(int type);
+        void set(Token t);
 
         void set_type(int t) {
             type = t;
@@ -100,8 +130,7 @@ class Token {
         }
         void set_col(int c) {
             col = c;
-        }
-        
+        }        
         int get_type() {
             return type;
         }
@@ -112,48 +141,12 @@ class Token {
             return col;
         }
         
-        static bool is_operator(char c);
-        static int get_op_key(char c);
-        static int get_comp_op_key(string c);
-        
-        static string type2str(int type);
+    private:    // TODO
+        static const string RESWORDS[];
+        static const string TOKTYPES[];
 };
 
-const int Token::TOKENS = 31;
-
-const int Token::TOKEN_LLAVE_IZQ = 1;   // {
-const int Token::TOKEN_LLAVE_DER = 2;   // }
-const int Token::TOKEN_COM = 3;         // #
-const int Token::TOKEN_COR_IZQ = 4;     // [
-const int Token::TOKEN_COR_DER = 5;     // ]
-const int Token::TOKEN_PAR_IZQ = 6;     // (
-const int Token::TOKEN_PAR_DER = 7;     // )
-const int Token::TOKEN_MAYOR = 8;       // >
-const int Token::TOKEN_MENOR = 9;       // <
-const int Token::TOKEN_MAYOR_IG = 10;   // >=
-const int Token::TOKEN_MENOR_IG = 11;   // <=
-const int Token::TOKEN_IGUAL_NUM = 12;  // ==
-const int Token::TOKEN_POINT = 13;      // .
-const int Token::TOKEN_DIFF_NUM = 14;   // !=
-const int Token::TOKEN_AND = 15;        // &&
-const int Token::TOKEN_OR = 16;         // 
-const int Token::TOKEN_NOT = 17;
-const int Token::TOKEN_MAS = 18;
-const int Token::TOKEN_MENOS = 19;
-const int Token::TOKEN_MUL = 20;
-const int Token::TOKEN_DIV = 21;
-const int Token::TOKEN_MOD = 22;
-const int Token::TOKEN_POD = 23;
-const int Token::TOKEN_ASSIGN = 24;
-const int Token::TOKEN_STRING = 25;
-const int Token::TOKEN_ID = 26;
-const int Token::TOKEN_RESWORD = 27;
-const int Token::TOKEN_INT = 28;
-const int Token::TOKEN_FLOAT = 29;
-const int Token::TOKEN_DOS_PUNTOS = 30;
-const int Token::TOKEN_COMMA = 31;
-
-const string Token::TYPES [Token::TOKENS] =
+const string Token::TOKTYPES [Token::N_TOKENS] =
     { "token_llave_izq", "token_llave_der", "token_comentario",
     "token_cor_izq", "token_cor_der", "token_par_izq", "token_par_der",
     "token_mayor", "token_menor", "token_mayor_igual", "token_menor_igual",
@@ -163,24 +156,57 @@ const string Token::TYPES [Token::TOKENS] =
     "token_string", "id", "token_reserved_word", "token_integer", "token_float", 
     "token_dosp", "token_coma" };
 
-Token::Token(int t, int l, int c) {
-    type = t;
-    line = l;
-    col = c;
-}
+const string Token::RESWORDS [Token::N_RWORDS] = {
+    "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
+    "end", "while", "elif", "else", "in", "desde", "todo", "nil"
+};
 
 Token::Token() {
+    t_class = 0;
+    type = 0;
+    line = 0;
+    col = 0;
+    lexeme = "";
+}
+
+Token::Token(int cla) {
+    t_class = cla;
     type = -1;
     line = -1;
     col = -1;
+    lexeme = "";
+}
+
+Token::Token(int cla, int key, int lin, int co) {
+    t_class = cla;
+    type = key;
+    lexeme = Token::type2str(key);
+    line = lin;
+    col = co;
+}
+
+Token::Token(int cla, int key, std::string lex, int lin, int co) {
+    t_class = cla;
+    type = key;
+    lexeme = lex;
+    line = lin;
+    col = co;
+}
+
+void Token::set(Token t) {
+    t_class = t.t_class;
+    type = t.type;
+    lexeme = t.lexeme;
+    line = t.line;
+    col = t.col;
 }
 
 string Token::type2str(int type) {
     type--;
-    return (type >= 0 && type < Token::TOKENS) ? Token::TYPES[type] : "ERROR_TKN";
+    return (type >= 0 && type < Token::N_TOKENS) ? Token::TOKTYPES[type] : "ERROR_TKN";
 }
 
-int Token::get_comp_op_key(string s) {
+int Token::get_op_comp_key(string s) {
     if(s == ">=") {
         return Token::TOKEN_MAYOR_IG;
     } if(s == "<=") {
@@ -246,136 +272,47 @@ int Token::get_op_key(char c) {
     
 }
 
-//
-// ─── OPERATOR ───────────────────────────────────────────────────────────────────
-//
-
-class Operator: public Token {
-    public:
-        Operator(int t, int l, int c) : Token(t, l, c) {
-            
-        }
-        
-        Operator() : Token() {
-            
-        }
-        void print();
-};
-
-class Lexeme: public Token {
-    string lexeme;
-    public:
-        Lexeme(int t, string s, int l, int c) : Token(t, l, c) {
-            type = t;
-            lexeme = s;
-            line = l;
-            col = c;
-        }
-        void print();
-};
-
-void Operator::print() {
-    cout << "<" << Token::type2str(type) << "," << line << "," << col << ">\n";
-}
-
-void Lexeme::print() {
-    cout << "<" << Token::type2str(type) << "," << lexeme << "," << line << "," << col << ">\n";
-}
-
-//
-// ─── RESERVED WORDS ─────────────────────────────────────────────────────────────
-//
-    
-class ResWord: public Token {
-    public:
-        static string RESWORDS[];
-        
-        static const int N_RWORDS;
-        
-        static const int RWORD_LOG;
-        static const int RWORD_FALSE;
-        static const int RWORD_TRUE;
-        static const int RWORD_IMPORTAR;
-        static const int RWORD_FOR;
-        static const int RWORD_IF;
-        static const int RWORD_FUNCION;
-        static const int RWORD_RETORNO;
-        static const int RWORD_END;
-        static const int RWORD_WHILE;
-        static const int RWORD_ELIF;
-        static const int RWORD_ELSE;
-        static const int RWORD_IN;
-        static const int RWORD_DESDE;
-        static const int RWORD_TODO;
-        static const int RWORD_NIL;
-        
-        ResWord(int t, int l, int c) : Token(t, l, c) {
-            type = t;
-            line = l;
-            col = c;
-        }
-        
-        static int get_word_key(string word);
-        static string get_word(int idx);
-        void print();
-};
-
-const int ResWord::N_RWORDS = 16;
-
-const int ResWord::RWORD_LOG = 1;
-const int ResWord::RWORD_FALSE = 2;
-const int ResWord::RWORD_TRUE = 3;
-const int ResWord::RWORD_IMPORTAR = 4;
-const int ResWord::RWORD_FOR = 5;
-const int ResWord::RWORD_IF = 6;
-const int ResWord::RWORD_FUNCION = 7;
-const int ResWord::RWORD_RETORNO = 8;
-const int ResWord::RWORD_END = 9;
-const int ResWord::RWORD_WHILE = 10;
-const int ResWord::RWORD_ELIF = 11;
-const int ResWord::RWORD_ELSE = 12;
-const int ResWord::RWORD_IN = 13;
-const int ResWord::RWORD_DESDE = 14;
-const int ResWord::RWORD_TODO = 15;
-const int ResWord::RWORD_NIL = 16;
-
-string ResWord::RESWORDS [ResWord::N_RWORDS] = {
-    "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
-    "end", "while", "elif", "else", "in", "desde", "todo", "nil"
-};
-
-int ResWord::get_word_key(string word) {    // TODO: optimizar
-    for(int i = 0; i < ResWord::N_RWORDS; i++) {
+int Token::get_res_word_key(string word) {    // TODO: optimizar
+    for(int i = 0; i < Token::N_RWORDS; i++) {
         if(word == RESWORDS[i]) return i+1;
-    }
-    
+    }    
     return -1;
 }
 
-string ResWord::get_word(int idx) {
+string Token::get_res_word(int idx) {
     idx--;
-    return (idx >= 0 && idx < ResWord::N_RWORDS) ? ResWord::RESWORDS[idx] : "ERROR_RWD";
+    return (idx >= 0 && idx < Token::N_RWORDS) ? Token::RESWORDS[idx] : "ERROR_RWD";
 }
 
-void ResWord::print() {
-    cout << "<" << ResWord::get_word(type) << "," << line << "," << col << ">\n";
+void Token::print() {
+    switch(t_class) {
+        case T_OP:  // operand
+            cout << "<" << Token::type2str(type) << "," << line << "," << col << ">\n";
+            break;
+        case T_LEX: // lexeme
+            cout << "<" << Token::type2str(type) << "," << lexeme << "," << line << "," << col << ">\n";
+            break;
+        case T_RES:
+            cout << "<" << Token::get_res_word(type) << "," << line << "," << col << ">\n";
+            break;
+    }
 }
 
 //
 // ─── FETCH TOKEN ────────────────────────────────────────────────────────────────
 //
 
-void get_next_token(string line) {
+Token get_next_token() {
+    Token token;
     string buffer = "";
-    line += '\n';
 
     int icol = 1;
-    for(int ncol = global_col_it; ncol <= line.length(); ncol++) {
-        char c = line[ncol-1];
+    for(int ncol = global_col_it; ncol <= global_line.length(); ncol++) {
+        char c = global_line[ncol-1];
+        //cout << "char: " << c << ", estado: " << global_state << ", buffer: " << buffer << ", ncol: " << ncol << "\n";
 
-        if(c == '#') {
+        if(c == '#')
             break;
-        }
         
         string str_buffer = "";
         switch(global_state) {
@@ -390,10 +327,7 @@ void get_next_token(string line) {
                 else 
                 {
                     switch(c) {
-                    case ' ': case '\t':
-                        break;
-                    case '\n':
-                        global_col_it = 1;
+                    case ' ': case '\t': case '\n':
                         break;
                     
                     // one-character operators
@@ -401,24 +335,28 @@ void get_next_token(string line) {
                     case ')': case '.': case '+': case '-': case '*':
                     case '/': case '%': case '^': case ':': case ',':
                     {
-                        Operator op(Token::get_op_key(c), global_line_it, ncol);
-                        global_col_it = ncol;
-                        op.print();
+                        Token op(Token::T_OP, Token::get_op_key(c), global_line_it, ncol);
+                        global_col_it = ncol+1;
+                        return op;
                     }
                     break;
                     
                     case '<': case '>': case '=': case '&': case '!':
                     case '|':
                     {
-                        int key;
-                        Operator op;
+                        int key = -1;
+
+                        Token op(Token::T_OP);
                         op.set_line(global_line_it);
                         op.set_col(ncol);
+
+                        string s;
+                        if(ncol+1 < global_line.length()) {
+                            s = global_line.substr(ncol-1, 2);
+                            key = Token::get_op_comp_key(s);
+                        }
                         
-                        string s(line, ncol-1, 2);
-                        key = Token::get_comp_op_key(s);
-                        
-                        if(key != -1 && ncol < line.length()) {
+                        if(key != -1 && ncol < global_line.length()) {
                             op.set_type(key);
                             ncol++;
                         } else if(Token::get_op_key(c) != -1) {
@@ -428,10 +366,11 @@ void get_next_token(string line) {
                         }
                         
                         if(op.get_type() != -1) {
-                            op.print();
-                            global_col_it = ncol;
+                            global_state = ESTADO_INICIAL;
+                            global_col_it = ncol+1;
+                            return op;
                         } else {
-                            cout << "*** ERROR: operand type is not defined\n";
+                            cout << "*** ERROR: operand type is not defined, somehow? like, how the fuck did this happen?\n";
                         }
                     }
                     break;
@@ -455,19 +394,22 @@ void get_next_token(string line) {
             {
                 switch(c) {
                     case '"':
-                    {
-                        Lexeme str(Token::TOKEN_STRING, buffer, global_line_it, icol);
-                        str.print();
-                        
-                        global_col_it = ncol;
+                    {                        
+                        global_col_it = ncol+1;
                         global_state = ESTADO_INICIAL;
-                        buffer = "";
+                        Token str(Token::T_LEX, Token::TOKEN_STRING, buffer, global_line_it, icol);
+                        return str;
                     }
                     break;
                         
                     default:
                     {
                         buffer += c;
+                        if(c == '\n') {
+                            if(!getline(cin, global_line)) {
+                                catch_error_lexico(global_line_it, ncol);
+                            }
+                        }
                     }
                         break;
                 }    
@@ -479,20 +421,19 @@ void get_next_token(string line) {
                 if(is_letter(c) || is_number(c)) {  // still an id
                     buffer += c;
                 } else {
-                    int key = ResWord::get_word_key(buffer);
+                    int key = Token::get_res_word_key(buffer);
                     
+                    global_col_it = ncol;
+                    global_state = ESTADO_INICIAL;
+
                     if(key == -1) {
-                        Lexeme word(Token::TOKEN_ID, buffer, global_line_it, icol);
-                        word.print();
+                        Token word(Token::T_LEX, Token::TOKEN_ID, buffer, global_line_it, icol);
+                        return word;
                     } else {
-                        ResWord word(key, global_line_it, icol);
-                        word.print();
+                        Token word(Token::T_RES, key, global_line_it, icol);
+                        return word;
                     }
                     
-                    global_col_it = ncol-1;
-                    --ncol;
-                    global_state = ESTADO_INICIAL;
-                    buffer = "";
                 }
             }
             break;
@@ -505,13 +446,10 @@ void get_next_token(string line) {
                     buffer += c;
                     global_state = ESTADO_FLOAT;
                 } else {
-                    Lexeme number(Token::TOKEN_INT, buffer, global_line_it, icol);
-                    number.print();
-
-                    global_col_it = ncol-1;
-                    buffer = "";
+                    global_col_it = ncol+1;
                     global_state = ESTADO_INICIAL;
-                    --ncol;
+                    Token number(Token::T_LEX, Token::TOKEN_INT, buffer, global_line_it, icol);
+                    return number;
                 }
             }
             break;
@@ -521,13 +459,10 @@ void get_next_token(string line) {
                 if (is_number(c)) {
                     buffer += c;
                 } else {
-                    Lexeme flt(Token::TOKEN_FLOAT, buffer, global_line_it, icol);
-                    flt.print();
-
-                    global_col_it = ncol-1;                        
-                    buffer = "";
+                    global_col_it = ncol;
                     global_state = ESTADO_INICIAL;
-                    ncol--;
+                    Token flt(Token::T_LEX, Token::TOKEN_FLOAT, buffer, global_line_it, icol);
+                    return flt;
                 }
             }
             break;
@@ -540,17 +475,23 @@ void get_next_token(string line) {
     }
 
     global_col_it = 0;
+    return token;
 }
 
-int main (int argc, char *argv[]) { // TODO: get file by command line parameters
+int main (int argc, char *argv[]) {
     global_state = ESTADO_INICIAL;
     global_line_it = 1;
-    string line;
+    queue<Token> tokens;
     
-    while ( getline (cin,line) ) {
+    while ( getline (cin,global_line) ) {
+        global_line+='\n';
         global_col_it = 1;
-        while(global_col_it > 0) {
-            get_next_token(line);
+        // cout << global_line << '\n';
+
+        while(global_col_it > 0 && global_col_it <= global_line.length()) {
+            Token token = get_next_token();
+            if(global_state == ESTADO_INICIAL)
+                token.print();
         }
         global_line_it++;
     }
