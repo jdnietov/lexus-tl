@@ -1,6 +1,6 @@
 #include <iostream>
-#include <fstream>
 #include <queue>
+#include <stdlib.h>
 #include <string>
 
 #define ESTADO_INICIAL 0
@@ -11,6 +11,38 @@
 
 using namespace std;
 
+//
+// ─── HELPERS ────────────────────────────────────────────────────────────────────
+//
+
+int global_line_iterator;
+
+bool is_number(char c) {
+    int ic = int(c);
+    return ic >= 48 && ic <= 57;
+}
+
+bool is_letter(char c) {
+    int ic = int(c);
+    if(ic > 90)  ic -= 32;
+    return ic >= 65 && ic <= 90;
+}
+
+//
+// ──────────────────────────────────────────────────────────────────────── I ──────────
+//   :::::: L E X I C A L   A N A L Y S I S : :  :   :    :     :        :          :
+// ──────────────────────────────────────────────────────────────────────────────────
+//
+
+void catch_error_lexico(int line, int col) {
+    cout << ">>> Error lexico(linea:" << line << ",posicion:" << col << ")\n";
+    exit(EXIT_FAILURE);
+}
+
+//
+// ─── TOKEN ──────────────────────────────────────────────────────────────────────
+//
+
 class Token {
     protected:
         int type;
@@ -18,7 +50,7 @@ class Token {
         int col;
         
     private:    // TODO
-        int TYPES[];
+        static const string TYPES[];
         
     public:
         static const int TOKENS;
@@ -59,6 +91,8 @@ class Token {
         Token();
         Token(int t, int l, int c);
         
+        void print();
+
         void set_type(int t) {
             type = t;
         }
@@ -81,9 +115,9 @@ class Token {
         
         static bool is_operator(char c);
         static int get_op_key(char c);
-        static int get_comp_op_key(std::string c);
+        static int get_comp_op_key(string c);
         
-        static std::string type2str(int type);
+        static string type2str(int type);
 };
 
 const int Token::TOKENS = 31;
@@ -120,7 +154,7 @@ const int Token::TOKEN_FLOAT = 29;
 const int Token::TOKEN_DOS_PUNTOS = 30;
 const int Token::TOKEN_COMMA = 31;
 
-const std::string TYPE2STR [Token::TOKENS] =
+const string Token::TYPES [Token::TOKENS] =
     { "token_llave_izq", "token_llave_der", "token_comentario",
     "token_cor_izq", "token_cor_der", "token_par_izq", "token_par_der",
     "token_mayor", "token_menor", "token_mayor_igual", "token_menor_igual",
@@ -142,74 +176,12 @@ Token::Token() {
     col = -1;
 }
 
-class Operator: public Token {
-    public:
-        Operator(int t, int l, int c) : Token(t, l, c) {
-            
-        }
-        
-        Operator() : Token() {
-            
-        }
-        void print();
-};
-
-class Lexeme: public Token {
-    std::string lexeme;
-    public:
-        Lexeme(int t, std::string s, int l, int c) : Token(t, l, c) {
-            type = t;
-            lexeme = s;
-            line = l;
-            col = c;
-        }
-        void print();
-};
-
-
-class ResWord: public Token {
-    public:
-        static std::string RESWORDS[];
-        
-        static const int N_RWORDS;
-        
-        static const int RWORD_LOG;
-        static const int RWORD_FALSE;
-        static const int RWORD_TRUE;
-        static const int RWORD_IMPORTAR;
-        static const int RWORD_FOR;
-        static const int RWORD_IF;
-        static const int RWORD_FUNCION;
-        static const int RWORD_RETORNO;
-        static const int RWORD_END;
-        static const int RWORD_WHILE;
-        static const int RWORD_ELIF;
-        static const int RWORD_ELSE;
-        static const int RWORD_IN;
-        static const int RWORD_DESDE;
-        static const int RWORD_TODO;
-        static const int RWORD_NIL;
-        
-        ResWord(int t, int l, int c) : Token(t, l, c) {
-            type = t;
-            line = l;
-            col = c;
-        }
-        
-        static int get_word_key(std::string word);
-        static std::string get_word(int idx);
-        void print();
-};
-
-
-
-    
-std::string Token::type2str(int type) {
+string Token::type2str(int type) {
     type--;
-    return (type >= 0 && type < Token::TOKENS) ? TYPE2STR[type] : "ERROR_TKN";
+    return (type >= 0 && type < Token::TOKENS) ? Token::TYPES[type] : "ERROR_TKN";
 }
 
-int Token::get_comp_op_key(std::string s) {
+int Token::get_comp_op_key(string s) {
     if(s == ">=") {
         return Token::TOKEN_MAYOR_IG;
     } if(s == "<=") {
@@ -275,13 +247,79 @@ int Token::get_op_key(char c) {
     
 }
 
+//
+// ─── OPERATOR ───────────────────────────────────────────────────────────────────
+//
+
+class Operator: public Token {
+    public:
+        Operator(int t, int l, int c) : Token(t, l, c) {
+            
+        }
+        
+        Operator() : Token() {
+            
+        }
+        void print();
+};
+
+class Lexeme: public Token {
+    string lexeme;
+    public:
+        Lexeme(int t, string s, int l, int c) : Token(t, l, c) {
+            type = t;
+            lexeme = s;
+            line = l;
+            col = c;
+        }
+        void print();
+};
+
 void Operator::print() {
-    std::cout << "<" << Token::type2str(type) << "," << line << "," << col << ">\n";
+    cout << "<" << Token::type2str(type) << "," << line << "," << col << ">\n";
 }
 
 void Lexeme::print() {
-    std::cout << "<" << Token::type2str(type) << "," << lexeme << "," << line << "," << col << ">\n";
+    cout << "<" << Token::type2str(type) << "," << lexeme << "," << line << "," << col << ">\n";
 }
+
+//
+// ─── RESERVED WORDS ─────────────────────────────────────────────────────────────
+//
+    
+class ResWord: public Token {
+    public:
+        static string RESWORDS[];
+        
+        static const int N_RWORDS;
+        
+        static const int RWORD_LOG;
+        static const int RWORD_FALSE;
+        static const int RWORD_TRUE;
+        static const int RWORD_IMPORTAR;
+        static const int RWORD_FOR;
+        static const int RWORD_IF;
+        static const int RWORD_FUNCION;
+        static const int RWORD_RETORNO;
+        static const int RWORD_END;
+        static const int RWORD_WHILE;
+        static const int RWORD_ELIF;
+        static const int RWORD_ELSE;
+        static const int RWORD_IN;
+        static const int RWORD_DESDE;
+        static const int RWORD_TODO;
+        static const int RWORD_NIL;
+        
+        ResWord(int t, int l, int c) : Token(t, l, c) {
+            type = t;
+            line = l;
+            col = c;
+        }
+        
+        static int get_word_key(string word);
+        static string get_word(int idx);
+        void print();
+};
 
 const int ResWord::N_RWORDS = 16;
 
@@ -302,12 +340,12 @@ const int ResWord::RWORD_DESDE = 14;
 const int ResWord::RWORD_TODO = 15;
 const int ResWord::RWORD_NIL = 16;
 
-std::string ResWord::RESWORDS [ResWord::N_RWORDS] = {
+string ResWord::RESWORDS [ResWord::N_RWORDS] = {
     "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
     "end", "while", "elif", "else", "in", "desde", "todo", "nil"
 };
 
-int ResWord::get_word_key(std::string word) {    // TODO: optimizar
+int ResWord::get_word_key(string word) {    // TODO: optimizar
     for(int i = 0; i < ResWord::N_RWORDS; i++) {
         if(word == RESWORDS[i]) return i+1;
     }
@@ -315,237 +353,210 @@ int ResWord::get_word_key(std::string word) {    // TODO: optimizar
     return -1;
 }
 
-std::string ResWord::get_word(int idx) {
+string ResWord::get_word(int idx) {
     idx--;
     return (idx >= 0 && idx < ResWord::N_RWORDS) ? ResWord::RESWORDS[idx] : "ERROR_RWD";
 }
 
 void ResWord::print() {
-    std::cout << "<" << ResWord::get_word(type) << "," << line << "," << col << ">\n";
+    cout << "<" << ResWord::get_word(type) << "," << line << "," << col << ">\n";
 }
 
-
-bool is_number(char c) {
-    int ic = int(c);
-    return ic >= 48 && ic <= 57;
-}
-
-bool is_letter(char c) {
-    int ic = int(c);
-    if(ic > 90)  ic -= 32;
-    return ic >= 65 && ic <= 90;
-}
-
-void catch_error_lexico(int line, int col) {
-    cout << ">>> Error lexico(linea:" << line << ",posicion:" << col << ")\n";
-}
+//
+// ─── FETCH TOKEN ────────────────────────────────────────────────────────────────
+//
 
 int main (int argc, char *argv[]) { // TODO: get file by command line parameters
-    // ifstream code ("in01.txt");
+    int state = ESTADO_INICIAL, nline = 1;
+    queue<Token> tokens;
+    string line, buffer = "";
     
-    // if (code.is_open()) {
-        int state = ESTADO_INICIAL, nline = 1;
-        queue<Token> tokens;
-        string line, buffer = "";
+    while ( getline (cin,line) ) {
+        line += '\n';
         
-        while ( getline (cin,line) ) {
-            line += '\n';
+        int icol = 1;
+        for(int ncol = 1; ncol <= line.length(); ncol++) {
+            char c = line[ncol-1];
+            // cout << "line " << nline << ", reading " << c << '\n';
             
-            int icol = 1;
-            for(int ncol = 1; ncol <= line.length(); ncol++) {
-                char c = line[ncol-1];
-                // cout << "line " << nline << ", reading " << c << '\n';
-                
-                // commentary - stop reading line, go to next
-                if(c == '#') {
-                    break;
-                }
-                
-                string str_buffer = "";
-                switch(state) {
-                    case ESTADO_INICIAL:
-                    {
-                        if(is_letter(c)) 
-                        {
-                            state = ESTADO_ID;
-                            buffer += c;
-                            icol = ncol;
-                        }
-                        
-                        else if(is_number(c)) 
-                        {
-                            state = ESTADO_INT;
-                            buffer += c;
-                            icol = ncol;
-                        }
-                        
-                        else 
-                        {
-                            switch(c) {
-                            case ' ':
-                            case '\t':
-                            case '\n':
-                                break;
-                            
-                            // one-character operators
-                            case '{':
-                            case '}':
-                            case '[':
-                            case ']':
-                            case '(':
-                            case ')':
-                            case '.':
-                            case '+':
-                            case '-':
-                            case '*':
-                            case '/':
-                            case '%':
-                            case '^':
-                            case ':':
-                            case ',':
-                            {
-                                Operator op(Token::get_op_key(c), nline, ncol);
-                                op.print();
-                            }
-                            break;
-                            
-                            case '<':
-                            case '>':
-                            case '=':
-                            case '&':
-                            case '!':
-                            case '|':
-                            {
-                                int key;
-                                Operator op;
-                                op.set_line(nline);
-                                op.set_col(ncol);
-                                
-                                string s(line, ncol-1, 2);
-                                key = Token::get_comp_op_key(s);
-                                
-                                if(key != -1 && ncol < line.length()) {
-                                    op.set_type(key);
-                                    ncol++;
-                                } else if(Token::get_op_key(c) != -1) {
-                                    op.set_type(Token::get_op_key(c));
-                                } else {
-                                    catch_error_lexico(nline, ncol);
-                                    return 0;
-                                }
-                                
-                                if(op.get_type() != -1)
-                                    op.print();
-                            }
-                            break;
-                            
-                            case '"':
-                            {
-                                state = ESTADO_STRING;
-                                icol = ncol;
-                            }
-                            break;
-                            
-                            default:
-                                catch_error_lexico(nline, ncol);
-                                return 0;
-                                break;
-                            }
-                        }
+            // commentary - stop reading line, go to next
+            if(c == '#') {
+                break;
+            }
+            
+            string str_buffer = "";
+            switch(state) {
+                case ESTADO_INICIAL:
+                {
+                    if(is_letter(c) || is_number(c)) {
+                        state = is_letter(c) ? ESTADO_ID : ESTADO_INT;
+                        buffer += c;
+                        icol = ncol;
                     }
-                    break;
                     
-                    case ESTADO_STRING:
+                    else 
                     {
                         switch(c) {
-                            case '"':
-                            {
-                                Lexeme str(Token::TOKEN_STRING, buffer, nline, icol);
-                                str.print();
-                               
-                                state = ESTADO_INICIAL;
-                                buffer = "";
-                            }
+                        case ' ':
+                        case '\t':
+                        case '\n':
                             break;
-                                
-                            default:
-                            {
-                                buffer += c;
-                            }
-                                break;
-                        }    
-                    }
-                    break;
-                    
-                    case ESTADO_ID:
-                    {
-                        if(is_letter(c) || is_number(c)) {  // still an id
-                            buffer += c;
-                        } else {
-                            int key = ResWord::get_word_key(buffer);
-                            
-                            if(key == -1) {
-                                Lexeme word(Token::TOKEN_ID, buffer, nline, icol);
-                                word.print();
-                            } else {
-                                ResWord word(key, nline, icol);
-                                word.print();
-                            }
-                            
-                            --ncol;
-                            state = ESTADO_INICIAL;
-                            buffer = "";
+                        
+                        // one-character operators
+                        case '{':
+                        case '}':
+                        case '[':
+                        case ']':
+                        case '(':
+                        case ')':
+                        case '.':
+                        case '+':
+                        case '-':
+                        case '*':
+                        case '/':
+                        case '%':
+                        case '^':
+                        case ':':
+                        case ',':
+                        {
+                            Operator op(Token::get_op_key(c), nline, ncol);
+                            op.print();
                         }
-                    }
-                    break;
-                    
-                    case ESTADO_INT:
-                    {
-                        if (is_number(c)) {
-                            buffer += c;
-                        } else if(c == '.') {
-                            buffer += c;
-                            state = ESTADO_FLOAT;
-                        } else {
-                            Lexeme number(Token::TOKEN_INT, buffer, nline, icol);
-                            number.print();
-                            buffer = "";
-                            state = ESTADO_INICIAL;
-                            --ncol;
-                        }
-                    }
-                    break;
-                    
-                    case ESTADO_FLOAT:  // TODO - read if next char is number too!
-                    {
-                        if (is_number(c)) {
-                            buffer += c;
-                        } else {
-                            Lexeme flt(Token::TOKEN_FLOAT, buffer, nline, icol);
-                            flt.print();
-                            
-                            buffer = "";
-                            state = ESTADO_INICIAL;
-                            ncol--;
-                        }
-                    }
-                    break;
-                    
-                    default:    // error - automaton experienced an error
-                        cout << "Error - we fucked up. Sorry!\n";
                         break;
+                        
+                        case '<':
+                        case '>':
+                        case '=':
+                        case '&':
+                        case '!':
+                        case '|':
+                        {
+                            int key;
+                            Operator op;
+                            op.set_line(nline);
+                            op.set_col(ncol);
+                            
+                            string s(line, ncol-1, 2);
+                            key = Token::get_comp_op_key(s);
+                            
+                            if(key != -1 && ncol < line.length()) {
+                                op.set_type(key);
+                                ncol++;
+                            } else if(Token::get_op_key(c) != -1) {
+                                op.set_type(Token::get_op_key(c));
+                            } else {
+                                catch_error_lexico(nline, ncol);
+                                return 0;
+                            }
+                            
+                            if(op.get_type() != -1)
+                                op.print();
+                        }
+                        break;
+                        
+                        case '"':
+                        {
+                            state = ESTADO_STRING;
+                            icol = ncol;
+                        }
+                        break;
+                        
+                        default:
+                            catch_error_lexico(nline, ncol);
+                            return 0;
+                            break;
+                        }
+                    }
                 }
+                break;
+                
+                case ESTADO_STRING:
+                {
+                    switch(c) {
+                        case '"':
+                        {
+                            Lexeme str(Token::TOKEN_STRING, buffer, nline, icol);
+                            str.print();
+                            
+                            state = ESTADO_INICIAL;
+                            buffer = "";
+                        }
+                        break;
+                            
+                        default:
+                        {
+                            buffer += c;
+                        }
+                            break;
+                    }    
+                }
+                break;
+                
+                case ESTADO_ID:
+                {
+                    if(is_letter(c) || is_number(c)) {  // still an id
+                        buffer += c;
+                    } else {
+                        int key = ResWord::get_word_key(buffer);
+                        
+                        if(key == -1) {
+                            Lexeme word(Token::TOKEN_ID, buffer, nline, icol);
+                            word.print();
+                        } else {
+                            ResWord word(key, nline, icol);
+                            word.print();
+                        }
+                        
+                        --ncol;
+                        state = ESTADO_INICIAL;
+                        buffer = "";
+                    }
+                }
+                break;
+                
+                case ESTADO_INT:
+                {
+                    if (is_number(c)) {
+                        buffer += c;
+                    } else if(c == '.') {
+                        buffer += c;
+                        state = ESTADO_FLOAT;
+                    } else {
+                        Lexeme number(Token::TOKEN_INT, buffer, nline, icol);
+                        number.print();
+                        buffer = "";
+                        state = ESTADO_INICIAL;
+                        --ncol;
+                    }
+                }
+                break;
+                
+                case ESTADO_FLOAT:  // TODO - read if next char is number too!
+                {
+                    if (is_number(c)) {
+                        buffer += c;
+                    } else {
+                        Lexeme flt(Token::TOKEN_FLOAT, buffer, nline, icol);
+                        flt.print();
+                        
+                        buffer = "";
+                        state = ESTADO_INICIAL;
+                        ncol--;
+                    }
+                }
+                break;
+                
+                default:    // error - automaton experienced an error
+                    cout << "*** ERROR: Automaton error (reached undefined state)\n";
+                    exit(EXIT_FAILURE);
+                    break;
             }
-            nline++;
         }
-        
-        if(state != ESTADO_INICIAL)
-            catch_error_lexico(nline-1, line.length());
-            
-        //code.close();
-    //}
-
-    //else cout << "No fue posible abrir el archivo." << '\n'; 
+        nline++;
+    }
+    
+    if(state != ESTADO_INICIAL)
+        catch_error_lexico(nline-1, line.length());
 
     return 0;
 }
