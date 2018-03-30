@@ -96,7 +96,7 @@ class Token {
         static int get_op_comp_key(string c);
         static int get_res_word_key(string word);
         static string get_res_word(int idx);
-        static string get_key_name(int type);
+        static string get_key_name(int key);
         static string key2str(int key);
 
         void set_key(int t) {
@@ -178,9 +178,9 @@ Token::Token(int cla, int key, std::string lex, int lin, int co) {
     col = co;
 }
 
-string Token::get_key_name(int type) {
-    type--;
-    return (type >= 0 && type < Token::N_TOKENS) ? Token::TOKNAMES[type] : "ERROR_TKN";
+string Token::get_key_name(int key) {
+    key--;
+    return (key >= 0 && key < Token::N_TOKENS) ? Token::TOKNAMES[key] : "ERROR_TKN";
 }
 
 int Token::get_op_comp_key(string s) {
@@ -360,6 +360,9 @@ Token get_next_token() {
                         }
                         
                         if(key != -1 && ncol < global_line.length()) {
+                            op.set_key(key);
+                            ncol++;
+                        } else if(Token::get_op_key(c) != -1) {
                             op.set_key(Token::get_op_key(c));
                         } else {
                             catch_error_lexico();
@@ -370,7 +373,7 @@ Token get_next_token() {
                             global_col_it = ncol+1;
                             return op;
                         } else {
-                            cout << "*** ERROR: operand type is not defined, somehow? like, how the fuck did this happen?\n";
+                            cout << "*** ERROR: operand t_key is not defined, somehow? like, how the fuck did this happen?\n";
                         }
                     }
                     break;
@@ -496,17 +499,25 @@ class Grammar {
     public:
         static void followup(int expectedKey) {
             if(currentToken.get_key() == expectedKey) {
-                currentToken = get_next_token();
-                cout << "approved.\n==> token is now ";
+                while((currentToken = get_next_token()).get_key() == Token::TOKEN_NEW_LINE);
+                cout << "OK\n\n";
                 currentToken.print();
             } else {
-                cout << "*** expected " << Token::get_key_name(expectedKey) << ", found " << Token::get_key_name(currentToken.get_key()) << '\n';
+                cout << "*** expected " << Token::get_key_name(expectedKey) << 
+                ", found " << Token::get_key_name(currentToken.get_key()) << '\n';
                 catch_error_sintactico();
             }
         }
 };
 
 class GrammarCond {
+    private:
+        static bool isOpCond(int tokenKey) {
+            return tokenKey == Token::TOKEN_AND || tokenKey == Token::TOKEN_IGUAL_NUM
+                || tokenKey == Token::TOKEN_MAYOR || tokenKey == Token::TOKEN_MAYOR_IG
+                || tokenKey == Token::TOKEN_MENOR || tokenKey == Token::TOKEN_MENOR_IG
+                || tokenKey == Token::TOKEN_OR;
+        }
     public:
         static void ID() {  // TODO: object fields, arrays...
             cout << "deriving from ID: \n";
@@ -531,10 +542,7 @@ class GrammarCond {
         static void OP_BIN_COND() {
             cout << "deriving from OP_BIN_COND: \n";
             int tokenKey = currentToken.get_key();
-            if(tokenKey == Token::TOKEN_AND || tokenKey == Token::TOKEN_IGUAL_NUM
-                || tokenKey == Token::TOKEN_MAYOR || Token::TOKEN_MAYOR_IG
-                || tokenKey == Token::TOKEN_MENOR || Token::TOKEN_MENOR_IG
-                || tokenKey == Token::TOKEN_OR) {
+            if(isOpCond(tokenKey)) {
                 Grammar::followup(tokenKey);
             } else {
                 catch_error_sintactico();
@@ -556,7 +564,7 @@ class GrammarCond {
                 }
             } else if(tokenClass == Token::T_LEX) {
                 if(tokenKey == Token::TOKEN_ID || tokenKey == Token::TOKEN_INT) {
-                    Grammar::followup(Token::TOKEN_ID);
+                    Grammar::followup(tokenKey);
                 } else {
                     catch_error_sintactico();
                 }
@@ -565,9 +573,9 @@ class GrammarCond {
 
         static void CONDAPP() {
             cout << "deriving from CONDAPP\n";
-            int tokenClass = currentToken.get_class();
+            int tokenKey = currentToken.get_key();
             //cout << Token::get_key_name(tokenClass) << '\n';
-            if(tokenClass == Token::T_OP) {
+            if(isOpCond(tokenKey)) {
                 OP_BIN_COND();
                 COND();
             }
@@ -588,7 +596,7 @@ class GrammarCond {
             } else if (tokenClass == Token::T_OP) {
                 if(tokenKey == Token::TOKEN_NOT) {
                     Grammar::followup(Token::TOKEN_NOT);
-                    CONDVAL();
+                    COND();
                 } else if(tokenKey == Token::TOKEN_PAR_IZQ) {
                     Grammar::followup(Token::TOKEN_PAR_IZQ);
                     COND();

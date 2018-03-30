@@ -96,7 +96,7 @@ class Token {
         static int get_op_comp_key(string c);
         static int get_res_word_key(string word);
         static string get_res_word(int idx);
-        static string get_key_name(int t_key);
+        static string get_key_name(int key);
         static string key2str(int key);
 
         void set_key(int t) {
@@ -173,9 +173,9 @@ Token::Token(int cla, int key, std::string lex, int lin, int co) {
     col = co;
 }
 
-string Token::get_key_name(int t_key) {
-    t_key--;
-    return (t_key >= 0 && t_key < Token::N_TOKENS) ? Token::TOKNAMES[t_key] : "ERROR_TKN";
+string Token::get_key_name(int key) {
+    key--;
+    return (key >= 0 && key < Token::N_TOKENS) ? Token::TOKNAMES[key] : "ERROR_TKN";
 }
 
 int Token::get_op_comp_key(string s) {
