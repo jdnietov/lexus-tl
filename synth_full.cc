@@ -22,7 +22,7 @@ class Token {
     protected:
         string lexeme;
         int t_class;
-        int type;
+        int t_key;
         int line;
         int col;
         
@@ -30,6 +30,7 @@ class Token {
         static const int N_TOKENS = 32;
         static const int N_RWORDS = 17;
 
+        // FIXME: potential inconsistencies with this key model
         static const int TOKEN_LLAVE_IZQ = 1;   // {
         static const int TOKEN_LLAVE_DER = 2;   // }
         static const int TOKEN_COM = 3;         // #
@@ -54,14 +55,14 @@ class Token {
         static const int TOKEN_MOD = 22;
         static const int TOKEN_POD = 23;
         static const int TOKEN_ASSIGN = 24;
-        static const int TOKEN_STRING = 25;
-        static const int TOKEN_ID = 26;
-        static const int TOKEN_RESWORD = 27;
-        static const int TOKEN_INT = 28;
-        static const int TOKEN_FLOAT = 29;
-        static const int TOKEN_DOS_PUNTOS = 30;
-        static const int TOKEN_COMMA = 31;
-        static const int TOKEN_NEW_LINE = 32;
+        static const int TOKEN_DOS_PUNTOS = 25;
+        static const int TOKEN_COMMA = 26;
+        static const int TOKEN_NEW_LINE = 27;
+        static const int TOKEN_STRING = 28;
+        static const int TOKEN_ID = 29;
+        static const int TOKEN_RESWORD = 30;
+        static const int TOKEN_INT = 31;
+        static const int TOKEN_FLOAT = 32;
         
         static const int RWORD_LOG = 1;
         static const int RWORD_FALSE = 2;
@@ -95,11 +96,11 @@ class Token {
         static int get_op_comp_key(string c);
         static int get_res_word_key(string word);
         static string get_res_word(int idx);
-        static string type2str(int type);
-        void set(Token t);
+        static string get_key_name(int type);
+        static string key2str(int key);
 
-        void set_type(int t) {
-            type = t;
+        void set_key(int t) {
+            t_key = t;
         }
         void set_line(int l) {
             line = l;
@@ -110,8 +111,8 @@ class Token {
         int get_class() {
             return t_class;
         }
-        int get_type() {
-            return type;
+        int get_key() {
+            return t_key;
         }
         int get_line() {
             return line;
@@ -122,18 +123,23 @@ class Token {
         
     private:    // TODO
         static const string RESWORDS[];
-        static const string TOKTYPES[];
+        static const string TOKNAMES[];
 };
 
-const string Token::TOKTYPES [Token::N_TOKENS] =
+const string Token::TOKNAMES [Token::N_TOKENS] =
     { "token_llave_izq", "token_llave_der", "token_comentario",
     "token_cor_izq", "token_cor_der", "token_par_izq", "token_par_der",
     "token_mayor", "token_menor", "token_mayor_igual", "token_menor_igual",
     "token_igual_num", "token_point", "token_diff_num",
     "token_and", "token_or", "token_not", "token_mas", "token_menos", 
     "token_mul", "token_div", "token_mod", "token_pot", "token_assign",
-    "token_string", "id", "token_reserved_word", "token_integer", "token_float", 
-    "token_dosp", "token_coma", "token_new_line" };
+    "token_dosp", "token_coma", "token_new_line", "token_string", "id",
+    "token_reserved_word", "token_integer", "token_float" };
+
+const string TOKSTRS [Token::N_TOKENS] =
+    { "{", "}", "#", "[", "]", "(", ")", ">", "<", ">=", "<=",
+      "==", ".", "!=", "&&", "||", "!", "+", "-", "*", "/", "%",
+      "^", "=",};
 
 const string Token::RESWORDS [Token::N_RWORDS] = {
     "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
@@ -142,7 +148,7 @@ const string Token::RESWORDS [Token::N_RWORDS] = {
 
 Token::Token() {
     t_class = 0;
-    type = 0;
+    t_key = 0;
     line = 0;
     col = 0;
     lexeme = "";
@@ -150,7 +156,7 @@ Token::Token() {
 
 Token::Token(int cla) {
     t_class = cla;
-    type = -1;
+    t_key = -1;
     line = -1;
     col = -1;
     lexeme = "";
@@ -158,31 +164,23 @@ Token::Token(int cla) {
 
 Token::Token(int cla, int key, int lin, int co) {
     t_class = cla;
-    type = key;
-    lexeme = Token::type2str(key);
+    t_key = key;
+    lexeme = Token::get_key_name(key);
     line = lin;
     col = co;
 }
 
 Token::Token(int cla, int key, std::string lex, int lin, int co) {
     t_class = cla;
-    type = key;
+    t_key = key;
     lexeme = lex;
     line = lin;
     col = co;
 }
 
-void Token::set(Token t) {
-    t_class = t.t_class;
-    type = t.type;
-    lexeme = t.lexeme;
-    line = t.line;
-    col = t.col;
-}
-
-string Token::type2str(int type) {
+string Token::get_key_name(int type) {
     type--;
-    return (type >= 0 && type < Token::N_TOKENS) ? Token::TOKTYPES[type] : "ERROR_TKN";
+    return (type >= 0 && type < Token::N_TOKENS) ? Token::TOKNAMES[type] : "ERROR_TKN";
 }
 
 int Token::get_op_comp_key(string s) {
@@ -267,15 +265,19 @@ string Token::get_res_word(int idx) {
 void Token::print() {
     switch(t_class) {
         case T_OP:  // operand
-            cout << "<" << Token::type2str(type) << "," << line << "," << col << ">\n";
+            cout << "<" << Token::get_key_name(t_key) << "," << line << "," << col << ">\n";
             break;
         case T_LEX: // lexeme
-            cout << "<" << Token::type2str(type) << "," << lexeme << "," << line << "," << col << ">\n";
+            cout << "<" << Token::get_key_name(t_key) << "," << lexeme << "," << line << "," << col << ">\n";
             break;
         case T_RES:
-            cout << "<" << Token::get_res_word(type) << "," << line << "," << col << ">\n";
+            cout << "<" << Token::get_res_word(t_key) << "," << line << "," << col << ">\n";
             break;
     }
+}
+
+string Token::key2str(int key) {
+
 }
 
 bool is_number(char c) {
@@ -358,15 +360,12 @@ Token get_next_token() {
                         }
                         
                         if(key != -1 && ncol < global_line.length()) {
-                            op.set_type(key);
-                            ncol++;
-                        } else if(Token::get_op_key(c) != -1) {
-                            op.set_type(Token::get_op_key(c));
+                            op.set_key(Token::get_op_key(c));
                         } else {
                             catch_error_lexico();
                         }
                         
-                        if(op.get_type() != -1) {
+                        if(op.get_key() != -1) {
                             global_state = ESTADO_INICIAL;
                             global_col_it = ncol+1;
                             return op;
@@ -489,19 +488,19 @@ Token get_next_token() {
 
 void catch_error_sintactico() {
     cout << '<' << global_line_it << ':' << global_col_it << "> Error sintactico."
-        << " Encontrado: \'" << Token::type2str(currentToken.get_type()) << "\n";
+        << " Encontrado: \'" << Token::get_key_name(currentToken.get_key()) << "\n";
     exit(EXIT_FAILURE);
 }
 
 class Grammar {
     public:
-        static void followup(int expectedType) {
-            if(currentToken.get_type() == expectedType) {
+        static void followup(int expectedKey) {
+            if(currentToken.get_key() == expectedKey) {
                 currentToken = get_next_token();
                 cout << "approved.\n==> token is now ";
                 currentToken.print();
             } else {
-                cout << "*** expected " << Token::type2str(expectedType) << ", found " << Token::type2str(currentToken.get_type()) << '\n';
+                cout << "*** expected " << Token::get_key_name(expectedKey) << ", found " << Token::get_key_name(currentToken.get_key()) << '\n';
                 catch_error_sintactico();
             }
         }
@@ -511,9 +510,9 @@ class GrammarCond {
     public:
         static void ID() {  // TODO: object fields, arrays...
             cout << "deriving from ID: \n";
-            int tokenType = currentToken.get_type();
-            if(tokenType == Token::TOKEN_ID) {
-                Grammar::followup(tokenType);
+            int tokenKey = currentToken.get_key();
+            if(tokenKey == Token::TOKEN_ID) {
+                Grammar::followup(tokenKey);
             } else {
                 catch_error_sintactico();
             }
@@ -521,9 +520,9 @@ class GrammarCond {
 
         static void XOP() {
             cout << "deriving from XOP: \n";
-            int tokenType = currentToken.get_type();
-            if(tokenType == Token::TOKEN_ID || tokenType == Token::TOKEN_INT) {
-                Grammar::followup(tokenType);
+            int tokenKey = currentToken.get_key();
+            if(tokenKey == Token::TOKEN_ID || tokenKey == Token::TOKEN_INT) {
+                Grammar::followup(tokenKey);
             } else {
                 catch_error_sintactico();
             }
@@ -531,12 +530,12 @@ class GrammarCond {
 
         static void OP_BIN_COND() {
             cout << "deriving from OP_BIN_COND: \n";
-            int tokenType = currentToken.get_type();
-            if(tokenType == Token::TOKEN_AND || tokenType == Token::TOKEN_IGUAL_NUM
-                || tokenType == Token::TOKEN_MAYOR || Token::TOKEN_MAYOR_IG
-                || tokenType == Token::TOKEN_MENOR || Token::TOKEN_MENOR_IG
-                || tokenType == Token::TOKEN_OR) {
-                Grammar::followup(tokenType);
+            int tokenKey = currentToken.get_key();
+            if(tokenKey == Token::TOKEN_AND || tokenKey == Token::TOKEN_IGUAL_NUM
+                || tokenKey == Token::TOKEN_MAYOR || Token::TOKEN_MAYOR_IG
+                || tokenKey == Token::TOKEN_MENOR || Token::TOKEN_MENOR_IG
+                || tokenKey == Token::TOKEN_OR) {
+                Grammar::followup(tokenKey);
             } else {
                 catch_error_sintactico();
             }
@@ -545,18 +544,18 @@ class GrammarCond {
         static void CONDVAL() {
             cout << "deriving from CONDVAL\n";
             int tokenClass = currentToken.get_class();
-            int tokenType = currentToken.get_type();
+            int tokenKey = currentToken.get_key();
 
             if(tokenClass == Token::T_RES) {
-                if(tokenType == Token::RWORD_TRUE) {
+                if(tokenKey == Token::RWORD_TRUE) {
                     Grammar::followup(Token::RWORD_TRUE);
-                } else if(tokenType == Token::RWORD_FALSE) {
+                } else if(tokenKey == Token::RWORD_FALSE) {
                     Grammar::followup(Token::RWORD_FALSE);
                 } else {
                     catch_error_sintactico();
                 }
             } else if(tokenClass == Token::T_LEX) {
-                if(tokenType == Token::TOKEN_ID || tokenType == Token::TOKEN_INT) {
+                if(tokenKey == Token::TOKEN_ID || tokenKey == Token::TOKEN_INT) {
                     Grammar::followup(Token::TOKEN_ID);
                 } else {
                     catch_error_sintactico();
@@ -567,7 +566,7 @@ class GrammarCond {
         static void CONDAPP() {
             cout << "deriving from CONDAPP\n";
             int tokenClass = currentToken.get_class();
-            //cout << Token::type2str(tokenClass) << '\n';
+            //cout << Token::get_key_name(tokenClass) << '\n';
             if(tokenClass == Token::T_OP) {
                 OP_BIN_COND();
                 COND();
@@ -577,20 +576,20 @@ class GrammarCond {
         static void COND() {
             cout << "deriving from COND\n";
             int tokenClass = currentToken.get_class();
-            int tokenType = currentToken.get_type();            
+            int tokenKey = currentToken.get_key();            
 
             if(tokenClass == Token::T_RES) {
-                if(tokenType == Token::RWORD_TRUE || tokenType == Token::RWORD_FALSE) {
+                if(tokenKey == Token::RWORD_TRUE || tokenKey == Token::RWORD_FALSE) {
                     CONDVAL();
                     CONDAPP();
                 } else {
                     catch_error_sintactico();
                 }
             } else if (tokenClass == Token::T_OP) {
-                if(tokenType == Token::TOKEN_NOT) {
+                if(tokenKey == Token::TOKEN_NOT) {
                     Grammar::followup(Token::TOKEN_NOT);
                     CONDVAL();
-                } else if(tokenType == Token::TOKEN_PAR_IZQ) {
+                } else if(tokenKey == Token::TOKEN_PAR_IZQ) {
                     Grammar::followup(Token::TOKEN_PAR_IZQ);
                     COND();
                     Grammar::followup(Token::TOKEN_PAR_DER);
@@ -598,7 +597,7 @@ class GrammarCond {
                     catch_error_sintactico();
                 }
             } else if(tokenClass == Token::T_LEX) {
-                if(tokenType == Token::TOKEN_ID || tokenType == Token::TOKEN_INT) {
+                if(tokenKey == Token::TOKEN_ID || tokenKey == Token::TOKEN_INT) {
                     CONDVAL();
                     CONDAPP();
                 }
