@@ -12,37 +12,11 @@
 using namespace std;
 
 //
-// ─── HELPERS ────────────────────────────────────────────────────────────────────
-//
-
-int global_state, global_line_it, global_col_it;
-string global_line;
-
-bool is_number(char c) {
-    int ic = int(c);
-    return ic >= 48 && ic <= 57;
-}
-
-bool is_letter(char c) {
-    int ic = int(c);
-    if(ic > 90)  ic -= 32;
-    return ic >= 65 && ic <= 90;
-}
-
-//
 // ──────────────────────────────────────────────────────────────────────── I ──────────
 //   :::::: L E X I C A L   A N A L Y S I S : :  :   :    :     :        :          :
 // ──────────────────────────────────────────────────────────────────────────────────
 //
 
-void catch_error_lexico(int line, int col) {
-    cout << ">>> Error lexico(linea:" << line << ",posicion:" << col << ")\n";
-    exit(EXIT_FAILURE);
-}
-
-//
-// ─── TOKEN ──────────────────────────────────────────────────────────────────────
-//
 
 class Token {
     protected:
@@ -53,8 +27,8 @@ class Token {
         int col;
         
     public:
-        static const int N_TOKENS = 31;
-        static const int N_RWORDS = 16;
+        static const int N_TOKENS = 32;
+        static const int N_RWORDS = 17;
 
         static const int TOKEN_LLAVE_IZQ = 1;   // {
         static const int TOKEN_LLAVE_DER = 2;   // }
@@ -87,6 +61,7 @@ class Token {
         static const int TOKEN_FLOAT = 29;
         static const int TOKEN_DOS_PUNTOS = 30;
         static const int TOKEN_COMMA = 31;
+        static const int TOKEN_NEW_LINE = 32;
         
         static const int RWORD_LOG = 1;
         static const int RWORD_FALSE = 2;
@@ -104,6 +79,7 @@ class Token {
         static const int RWORD_DESDE = 14;
         static const int RWORD_TODO = 15;
         static const int RWORD_NIL = 16;
+        static const int RWORD_LEER = 17;
 
         static const int T_OP = 1;
         static const int T_LEX = 2;
@@ -130,7 +106,10 @@ class Token {
         }
         void set_col(int c) {
             col = c;
-        }        
+        }
+        int get_class() {
+            return t_class;
+        }
         int get_type() {
             return type;
         }
@@ -154,11 +133,11 @@ const string Token::TOKTYPES [Token::N_TOKENS] =
     "token_and", "token_or", "token_not", "token_mas", "token_menos", 
     "token_mul", "token_div", "token_mod", "token_pot", "token_assign",
     "token_string", "id", "token_reserved_word", "token_integer", "token_float", 
-    "token_dosp", "token_coma" };
+    "token_dosp", "token_coma", "token_new_line" };
 
 const string Token::RESWORDS [Token::N_RWORDS] = {
     "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
-    "end", "while", "elif", "else", "in", "desde", "todo", "nil"
+    "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer"
 };
 
 Token::Token() {
@@ -269,10 +248,9 @@ int Token::get_op_key(char c) {
         default:
             return -1;
     }
-    
 }
 
-int Token::get_res_word_key(string word) {    // TODO: optimizar
+int Token::get_res_word_key(string word) {
     for(int i = 0; i < Token::N_RWORDS; i++) {
         if(word == RESWORDS[i]) return i+1;
     }    
@@ -298,9 +276,29 @@ void Token::print() {
     }
 }
 
+bool is_number(char c) {
+    int ic = int(c);
+    return ic >= 48 && ic <= 57;
+}
+
+bool is_letter(char c) {
+    int ic = int(c);
+    if(ic > 90)  ic -= 32;
+    return ic >= 65 && ic <= 90;
+}
+
 //
 // ─── FETCH TOKEN ────────────────────────────────────────────────────────────────
 //
+
+Token currentToken;
+int global_state, global_line_it, global_col_it;
+string global_line;
+
+void catch_error_lexico() {
+    cout << ">>> Error lexico(linea:" << global_line_it << ",posicion:" << global_col_it << ")\n";
+    exit(EXIT_FAILURE);
+}
 
 Token get_next_token() {
     Token token;
@@ -327,13 +325,14 @@ Token get_next_token() {
                 else 
                 {
                     switch(c) {
-                    case ' ': case '\t': case '\n':
+                    case ' ': case '\t':
                         break;
                     
                     // one-character operators
                     case '{': case '}': case '[': case ']': case '(':
                     case ')': case '.': case '+': case '-': case '*':
                     case '/': case '%': case '^': case ':': case ',':
+                    case '\n':
                     {
                         Token op(Token::T_OP, Token::get_op_key(c), global_line_it, ncol);
                         global_col_it = ncol+1;
@@ -362,7 +361,7 @@ Token get_next_token() {
                         } else if(Token::get_op_key(c) != -1) {
                             op.set_type(Token::get_op_key(c));
                         } else {
-                            catch_error_lexico(global_line_it, ncol);
+                            catch_error_lexico();
                         }
                         
                         if(op.get_type() != -1) {
@@ -383,7 +382,8 @@ Token get_next_token() {
                     break;
                     
                     default:
-                        catch_error_lexico(global_line_it, ncol);
+                        global_col_it = ncol;
+                        catch_error_lexico();
                         break;
                     }
                 }
@@ -407,7 +407,8 @@ Token get_next_token() {
                         buffer += c;
                         if(c == '\n') {
                             if(!getline(cin, global_line)) {
-                                catch_error_lexico(global_line_it, ncol);
+                                global_col_it = ncol;
+                                catch_error_lexico();
                             }
                         }
                     }
@@ -446,7 +447,7 @@ Token get_next_token() {
                     buffer += c;
                     global_state = ESTADO_FLOAT;
                 } else {
-                    global_col_it = ncol+1;
+                    global_col_it = ncol;
                     global_state = ESTADO_INICIAL;
                     Token number(Token::T_LEX, Token::TOKEN_INT, buffer, global_line_it, icol);
                     return number;
@@ -497,7 +498,7 @@ int main (int argc, char *argv[]) {
     }
     
     if(global_state != ESTADO_INICIAL)
-        catch_error_lexico(global_line_it-1, global_col_it);
+        catch_error_lexico();
 
     return 0;
 }

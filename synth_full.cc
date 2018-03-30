@@ -1,57 +1,637 @@
 #include <iostream>
-#include <vector>
-#include <fstream>
 #include <queue>
+#include <stdlib.h>
 #include <string>
+
+#define ESTADO_INICIAL 0
+#define ESTADO_STRING 1
+#define ESTADO_ID 2
+#define ESTADO_INT 3
+#define ESTADO_FLOAT 4
 
 using namespace std;
 
-class BNFGrammar {
-        int variables;
-        vector< vector<string> > rules;
+//
+// ──────────────────────────────────────────────────────────────────────── I ──────────
+//   :::::: L E X I C A L   A N A L Y S I S : :  :   :    :     :        :          :
+// ──────────────────────────────────────────────────────────────────────────────────
+//
 
+
+class Token {
+    protected:
+        string lexeme;
+        int t_class;
+        int type;
+        int line;
+        int col;
+        
     public:
-        BNFGrammar (int);
-        void add(int i, string s) {
-            if(i >= variables) {
-                cout << "error: variable " << i << " does not exist\n==> not adding rule to variable\n";
-                return;
-            }
+        static const int N_TOKENS = 32;
+        static const int N_RWORDS = 17;
 
-            if(rules[i].size() > 0) {
-                rules[i].push_back(s);
+        static const int TOKEN_LLAVE_IZQ = 1;   // {
+        static const int TOKEN_LLAVE_DER = 2;   // }
+        static const int TOKEN_COM = 3;         // #
+        static const int TOKEN_COR_IZQ = 4;     // [
+        static const int TOKEN_COR_DER = 5;     // ]
+        static const int TOKEN_PAR_IZQ = 6;     // (
+        static const int TOKEN_PAR_DER = 7;     // )
+        static const int TOKEN_MAYOR = 8;       // >
+        static const int TOKEN_MENOR = 9;       // <
+        static const int TOKEN_MAYOR_IG = 10;   // >=
+        static const int TOKEN_MENOR_IG = 11;   // <=
+        static const int TOKEN_IGUAL_NUM = 12;  // ==
+        static const int TOKEN_POINT = 13;      // .
+        static const int TOKEN_DIFF_NUM = 14;   // !=
+        static const int TOKEN_AND = 15;        // &&
+        static const int TOKEN_OR = 16;         // 
+        static const int TOKEN_NOT = 17;
+        static const int TOKEN_MAS = 18;
+        static const int TOKEN_MENOS = 19;
+        static const int TOKEN_MUL = 20;
+        static const int TOKEN_DIV = 21;
+        static const int TOKEN_MOD = 22;
+        static const int TOKEN_POD = 23;
+        static const int TOKEN_ASSIGN = 24;
+        static const int TOKEN_STRING = 25;
+        static const int TOKEN_ID = 26;
+        static const int TOKEN_RESWORD = 27;
+        static const int TOKEN_INT = 28;
+        static const int TOKEN_FLOAT = 29;
+        static const int TOKEN_DOS_PUNTOS = 30;
+        static const int TOKEN_COMMA = 31;
+        static const int TOKEN_NEW_LINE = 32;
+        
+        static const int RWORD_LOG = 1;
+        static const int RWORD_FALSE = 2;
+        static const int RWORD_TRUE = 3;
+        static const int RWORD_IMPORTAR = 4;
+        static const int RWORD_FOR = 5;
+        static const int RWORD_IF = 6;
+        static const int RWORD_FUNCION = 7;
+        static const int RWORD_RETORNO = 8;
+        static const int RWORD_END = 9;
+        static const int RWORD_WHILE = 10;
+        static const int RWORD_ELIF = 11;
+        static const int RWORD_ELSE = 12;
+        static const int RWORD_IN = 13;
+        static const int RWORD_DESDE = 14;
+        static const int RWORD_TODO = 15;
+        static const int RWORD_NIL = 16;
+        static const int RWORD_LEER = 17;
+
+        static const int T_OP = 1;
+        static const int T_LEX = 2;
+        static const int T_RES = 3;
+        
+        Token();
+        Token(int cla);
+        Token(int cla, int key, int lin, int co);
+        Token(int cla, int key, string lex, int lin, int co);
+        
+        void print();
+        static int get_op_key(char c);
+        static int get_op_comp_key(string c);
+        static int get_res_word_key(string word);
+        static string get_res_word(int idx);
+        static string type2str(int type);
+        void set(Token t);
+
+        void set_type(int t) {
+            type = t;
+        }
+        void set_line(int l) {
+            line = l;
+        }
+        void set_col(int c) {
+            col = c;
+        }
+        int get_class() {
+            return t_class;
+        }
+        int get_type() {
+            return type;
+        }
+        int get_line() {
+            return line;
+        }
+        int get_col() {
+            return col;
+        }
+        
+    private:    // TODO
+        static const string RESWORDS[];
+        static const string TOKTYPES[];
+};
+
+const string Token::TOKTYPES [Token::N_TOKENS] =
+    { "token_llave_izq", "token_llave_der", "token_comentario",
+    "token_cor_izq", "token_cor_der", "token_par_izq", "token_par_der",
+    "token_mayor", "token_menor", "token_mayor_igual", "token_menor_igual",
+    "token_igual_num", "token_point", "token_diff_num",
+    "token_and", "token_or", "token_not", "token_mas", "token_menos", 
+    "token_mul", "token_div", "token_mod", "token_pot", "token_assign",
+    "token_string", "id", "token_reserved_word", "token_integer", "token_float", 
+    "token_dosp", "token_coma", "token_new_line" };
+
+const string Token::RESWORDS [Token::N_RWORDS] = {
+    "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
+    "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer"
+};
+
+Token::Token() {
+    t_class = 0;
+    type = 0;
+    line = 0;
+    col = 0;
+    lexeme = "";
+}
+
+Token::Token(int cla) {
+    t_class = cla;
+    type = -1;
+    line = -1;
+    col = -1;
+    lexeme = "";
+}
+
+Token::Token(int cla, int key, int lin, int co) {
+    t_class = cla;
+    type = key;
+    lexeme = Token::type2str(key);
+    line = lin;
+    col = co;
+}
+
+Token::Token(int cla, int key, std::string lex, int lin, int co) {
+    t_class = cla;
+    type = key;
+    lexeme = lex;
+    line = lin;
+    col = co;
+}
+
+void Token::set(Token t) {
+    t_class = t.t_class;
+    type = t.type;
+    lexeme = t.lexeme;
+    line = t.line;
+    col = t.col;
+}
+
+string Token::type2str(int type) {
+    type--;
+    return (type >= 0 && type < Token::N_TOKENS) ? Token::TOKTYPES[type] : "ERROR_TKN";
+}
+
+int Token::get_op_comp_key(string s) {
+    if(s == ">=") {
+        return Token::TOKEN_MAYOR_IG;
+    } if(s == "<=") {
+        return Token::TOKEN_MENOR_IG;
+    } if(s == "==") {
+        return Token::TOKEN_IGUAL_NUM;
+    } if(s == "!=") {
+        return Token::TOKEN_DIFF_NUM;
+    } if(s == "&&") {
+        return Token::TOKEN_AND;
+    } if(s == "||") {
+        return Token::TOKEN_OR;
+    }
+        
+    return -1;
+}
+
+int Token::get_op_key(char c) {
+    switch(c) {  // check first character
+        case '{':
+            return Token::TOKEN_LLAVE_IZQ;
+        case '}':
+            return Token::TOKEN_LLAVE_DER;
+        case '[':
+            return Token::TOKEN_COR_IZQ;
+        case ']':
+            return Token::TOKEN_COR_DER;
+        case '#':
+            return Token::TOKEN_COM;
+        case '(':
+            return Token::TOKEN_PAR_IZQ;
+         case ')':
+            return Token::TOKEN_PAR_DER;
+         case '>':
+            return Token::TOKEN_MAYOR;
+         case '<':
+            return Token::TOKEN_MENOR;
+        case '.':
+            return Token::TOKEN_POINT;
+        case '!':
+            return Token::TOKEN_NOT;
+        case '+':
+            return Token::TOKEN_MAS;
+        case '-':
+            return Token::TOKEN_MENOS;
+        case '*':
+            return Token::TOKEN_MUL;
+        case '/':
+            return Token::TOKEN_DIV;
+        case '%':
+            return Token::TOKEN_MOD;
+        case '^':
+            return Token::TOKEN_POD;
+        case '=':
+            return Token::TOKEN_ASSIGN;
+        case ':':
+            return Token::TOKEN_DOS_PUNTOS;
+        case ',':
+            return Token::TOKEN_COMMA;
+        case '\n':
+            return Token::TOKEN_NEW_LINE;
+        default:
+            return -1;
+    }
+}
+
+int Token::get_res_word_key(string word) {
+    for(int i = 0; i < Token::N_RWORDS; i++) {
+        if(word == RESWORDS[i]) return i+1;
+    }    
+    return -1;
+}
+
+string Token::get_res_word(int idx) {
+    idx--;
+    return (idx >= 0 && idx < Token::N_RWORDS) ? Token::RESWORDS[idx] : "ERROR_RWD";
+}
+
+void Token::print() {
+    switch(t_class) {
+        case T_OP:  // operand
+            cout << "<" << Token::type2str(type) << "," << line << "," << col << ">\n";
+            break;
+        case T_LEX: // lexeme
+            cout << "<" << Token::type2str(type) << "," << lexeme << "," << line << "," << col << ">\n";
+            break;
+        case T_RES:
+            cout << "<" << Token::get_res_word(type) << "," << line << "," << col << ">\n";
+            break;
+    }
+}
+
+bool is_number(char c) {
+    int ic = int(c);
+    return ic >= 48 && ic <= 57;
+}
+
+bool is_letter(char c) {
+    int ic = int(c);
+    if(ic > 90)  ic -= 32;
+    return ic >= 65 && ic <= 90;
+}
+
+//
+// ─── FETCH TOKEN ────────────────────────────────────────────────────────────────
+//
+
+Token currentToken;
+int global_state, global_line_it, global_col_it;
+string global_line;
+
+void catch_error_lexico() {
+    cout << ">>> Error lexico(linea:" << global_line_it << ",posicion:" << global_col_it << ")\n";
+    exit(EXIT_FAILURE);
+}
+
+Token get_next_token() {
+    Token token;
+    string buffer = "";
+
+    int icol = 1;
+    for(int ncol = global_col_it; ncol <= global_line.length(); ncol++) {
+        char c = global_line[ncol-1];
+        //cout << "char: " << c << ", estado: " << global_state << ", buffer: " << buffer << ", ncol: " << ncol << "\n";
+
+        if(c == '#')
+            break;
+        
+        string str_buffer = "";
+        switch(global_state) {
+            case ESTADO_INICIAL:
+            {
+                if(is_letter(c) || is_number(c)) {
+                    global_state = is_letter(c) ? ESTADO_ID : ESTADO_INT;
+                    buffer += c;
+                    icol = ncol;
+                }
+                
+                else 
+                {
+                    switch(c) {
+                    case ' ': case '\t':
+                        break;
+                    
+                    // one-character operators
+                    case '{': case '}': case '[': case ']': case '(':
+                    case ')': case '.': case '+': case '-': case '*':
+                    case '/': case '%': case '^': case ':': case ',':
+                    case '\n':
+                    {
+                        Token op(Token::T_OP, Token::get_op_key(c), global_line_it, ncol);
+                        global_col_it = ncol+1;
+                        return op;
+                    }
+                    break;
+                    
+                    case '<': case '>': case '=': case '&': case '!':
+                    case '|':
+                    {
+                        int key = -1;
+
+                        Token op(Token::T_OP);
+                        op.set_line(global_line_it);
+                        op.set_col(ncol);
+
+                        string s;
+                        if(ncol+1 < global_line.length()) {
+                            s = global_line.substr(ncol-1, 2);
+                            key = Token::get_op_comp_key(s);
+                        }
+                        
+                        if(key != -1 && ncol < global_line.length()) {
+                            op.set_type(key);
+                            ncol++;
+                        } else if(Token::get_op_key(c) != -1) {
+                            op.set_type(Token::get_op_key(c));
+                        } else {
+                            catch_error_lexico();
+                        }
+                        
+                        if(op.get_type() != -1) {
+                            global_state = ESTADO_INICIAL;
+                            global_col_it = ncol+1;
+                            return op;
+                        } else {
+                            cout << "*** ERROR: operand type is not defined, somehow? like, how the fuck did this happen?\n";
+                        }
+                    }
+                    break;
+                    
+                    case '"':
+                    {
+                        global_state = ESTADO_STRING;
+                        icol = ncol;
+                    }
+                    break;
+                    
+                    default:
+                        global_col_it = ncol;
+                        catch_error_lexico();
+                        break;
+                    }
+                }
+            }
+            break;
+            
+            case ESTADO_STRING:
+            {
+                switch(c) {
+                    case '"':
+                    {                        
+                        global_col_it = ncol+1;
+                        global_state = ESTADO_INICIAL;
+                        Token str(Token::T_LEX, Token::TOKEN_STRING, buffer, global_line_it, icol);
+                        return str;
+                    }
+                    break;
+                        
+                    default:
+                    {
+                        buffer += c;
+                        if(c == '\n') {
+                            if(!getline(cin, global_line)) {
+                                global_col_it = ncol;
+                                catch_error_lexico();
+                            }
+                        }
+                    }
+                        break;
+                }    
+            }
+            break;
+            
+            case ESTADO_ID:
+            {
+                if(is_letter(c) || is_number(c)) {  // still an id
+                    buffer += c;
+                } else {
+                    int key = Token::get_res_word_key(buffer);
+                    
+                    global_col_it = ncol;
+                    global_state = ESTADO_INICIAL;
+
+                    if(key == -1) {
+                        Token word(Token::T_LEX, Token::TOKEN_ID, buffer, global_line_it, icol);
+                        return word;
+                    } else {
+                        Token word(Token::T_RES, key, global_line_it, icol);
+                        return word;
+                    }
+                    
+                }
+            }
+            break;
+            
+            case ESTADO_INT:
+            {
+                if (is_number(c)) {
+                    buffer += c;
+                } else if(c == '.') {
+                    buffer += c;
+                    global_state = ESTADO_FLOAT;
+                } else {
+                    global_col_it = ncol;
+                    global_state = ESTADO_INICIAL;
+                    Token number(Token::T_LEX, Token::TOKEN_INT, buffer, global_line_it, icol);
+                    return number;
+                }
+            }
+            break;
+            
+            case ESTADO_FLOAT:  // TODO - read if next char is number too!
+            {
+                if (is_number(c)) {
+                    buffer += c;
+                } else {
+                    global_col_it = ncol;
+                    global_state = ESTADO_INICIAL;
+                    Token flt(Token::T_LEX, Token::TOKEN_FLOAT, buffer, global_line_it, icol);
+                    return flt;
+                }
+            }
+            break;
+            
+            default:    // error - automaton experienced an error
+                cout << "*** ERROR: Automaton error (reached undefined global_state)\n";
+                exit(EXIT_FAILURE);
+                break;
+        }
+    }
+
+    global_col_it = 0;
+    return token;
+}
+
+//
+// ────────────────────────────────────────────────────────────────────── II ──────────
+//   :::::: S Y N T A X   A N A L Y S I S : :  :   :    :     :        :          :
+// ────────────────────────────────────────────────────────────────────────────────
+//
+
+void catch_error_sintactico() {
+    cout << '<' << global_line_it << ':' << global_col_it << "> Error sintactico."
+        << " Encontrado: \'" << Token::type2str(currentToken.get_type()) << "\n";
+    exit(EXIT_FAILURE);
+}
+
+class Grammar {
+    public:
+        static void followup(int expectedType) {
+            if(currentToken.get_type() == expectedType) {
+                currentToken = get_next_token();
+                cout << "approved.\n==> token is now ";
+                currentToken.print();
             } else {
-                vector<string> r(1, s);
-                rules[i] = r;
+                cout << "*** expected " << Token::type2str(expectedType) << ", found " << Token::type2str(currentToken.get_type()) << '\n';
+                catch_error_sintactico();
             }
         }
-        void print() { 
-            for(int i=0; i<rules.size(); i++) {
-                cout << "rules for " << i << '\n';
-                for(int j=0; j<rules[i].size(); j++) {
-                    cout << "\t" << rules[i][j] << '\n';
+};
+
+class GrammarCond {
+    public:
+        static void ID() {  // TODO: object fields, arrays...
+            cout << "deriving from ID: \n";
+            int tokenType = currentToken.get_type();
+            if(tokenType == Token::TOKEN_ID) {
+                Grammar::followup(tokenType);
+            } else {
+                catch_error_sintactico();
+            }
+        }
+
+        static void XOP() {
+            cout << "deriving from XOP: \n";
+            int tokenType = currentToken.get_type();
+            if(tokenType == Token::TOKEN_ID || tokenType == Token::TOKEN_INT) {
+                Grammar::followup(tokenType);
+            } else {
+                catch_error_sintactico();
+            }
+        }
+
+        static void OP_BIN_COND() {
+            cout << "deriving from OP_BIN_COND: \n";
+            int tokenType = currentToken.get_type();
+            if(tokenType == Token::TOKEN_AND || tokenType == Token::TOKEN_IGUAL_NUM
+                || tokenType == Token::TOKEN_MAYOR || Token::TOKEN_MAYOR_IG
+                || tokenType == Token::TOKEN_MENOR || Token::TOKEN_MENOR_IG
+                || tokenType == Token::TOKEN_OR) {
+                Grammar::followup(tokenType);
+            } else {
+                catch_error_sintactico();
+            }
+        }
+
+        static void CONDVAL() {
+            cout << "deriving from CONDVAL\n";
+            int tokenClass = currentToken.get_class();
+            int tokenType = currentToken.get_type();
+
+            if(tokenClass == Token::T_RES) {
+                if(tokenType == Token::RWORD_TRUE) {
+                    Grammar::followup(Token::RWORD_TRUE);
+                } else if(tokenType == Token::RWORD_FALSE) {
+                    Grammar::followup(Token::RWORD_FALSE);
+                } else {
+                    catch_error_sintactico();
+                }
+            } else if(tokenClass == Token::T_LEX) {
+                if(tokenType == Token::TOKEN_ID || tokenType == Token::TOKEN_INT) {
+                    Grammar::followup(Token::TOKEN_ID);
+                } else {
+                    catch_error_sintactico();
+                }
+            }
+        }
+
+        static void CONDAPP() {
+            cout << "deriving from CONDAPP\n";
+            int tokenClass = currentToken.get_class();
+            //cout << Token::type2str(tokenClass) << '\n';
+            if(tokenClass == Token::T_OP) {
+                OP_BIN_COND();
+                COND();
+            }
+        }
+
+        static void COND() {
+            cout << "deriving from COND\n";
+            int tokenClass = currentToken.get_class();
+            int tokenType = currentToken.get_type();            
+
+            if(tokenClass == Token::T_RES) {
+                if(tokenType == Token::RWORD_TRUE || tokenType == Token::RWORD_FALSE) {
+                    CONDVAL();
+                    CONDAPP();
+                } else {
+                    catch_error_sintactico();
+                }
+            } else if (tokenClass == Token::T_OP) {
+                if(tokenType == Token::TOKEN_NOT) {
+                    Grammar::followup(Token::TOKEN_NOT);
+                    CONDVAL();
+                } else if(tokenType == Token::TOKEN_PAR_IZQ) {
+                    Grammar::followup(Token::TOKEN_PAR_IZQ);
+                    COND();
+                    Grammar::followup(Token::TOKEN_PAR_DER);
+                } else {
+                    catch_error_sintactico();
+                }
+            } else if(tokenClass == Token::T_LEX) {
+                if(tokenType == Token::TOKEN_ID || tokenType == Token::TOKEN_INT) {
+                    CONDVAL();
+                    CONDAPP();
                 }
             }
         }
 };
 
-BNFGrammar::BNFGrammar (int v) {
-    variables = v;
-    rules.resize(v);
-}   
-
-int main() {
-    string entry;
+int main (int argc, char *argv[]) {
+    global_state = ESTADO_INICIAL;
+    global_line_it = 1;
+    queue<Token> tokens;
     
-    BNFGrammar bigboss(5);
-    bigboss.add(0, "a |1| |2|");
-    bigboss.add(1, "b bas");
-    bigboss.add(1, "big |2| boss");
-    bigboss.add(2, "");
-    bigboss.add(2, "c");
-    bigboss.add(6, "c");
+    while ( getline (cin,global_line) ) {
+        global_line+='\n';
+        global_col_it = 1;
+        // cout << global_line << '\n';
 
-    bigboss.print();
+        while(global_col_it > 0 && global_col_it <= global_line.length()) {
+            currentToken = get_next_token();
+            if(global_state == ESTADO_INICIAL) {
+                cout << '\n';
+                currentToken.print();
+                GrammarCond::COND();
+                cout << "done.\n";
+            }
+        }
+        global_line_it++;
+    }
+
+    if(global_state != ESTADO_INICIAL) {
+        --global_line_it;
+        catch_error_lexico();
+    }
 
     return 0;
 }
