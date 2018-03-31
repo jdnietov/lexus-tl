@@ -27,8 +27,8 @@ class Token {
         int col;
         
     public:
-        static const int N_TOKENS = 32;
-        static const int N_RWORDS = 17;
+        static const int N_TOKENS = 49;
+        static const int N_RWORDS = 33;
 
         // FIXME: potential inconsistencies with this key model
         static const int TOKEN_LLAVE_IZQ = 1;   // {
@@ -63,24 +63,23 @@ class Token {
         static const int TOKEN_RESWORD = 30;
         static const int TOKEN_INT = 31;
         static const int TOKEN_FLOAT = 32;
-        
-        static const int RWORD_LOG = 1;
-        static const int RWORD_FALSE = 2;
-        static const int RWORD_TRUE = 3;
-        static const int RWORD_IMPORTAR = 4;
-        static const int RWORD_FOR = 5;
-        static const int RWORD_IF = 6;
-        static const int RWORD_FUNCION = 7;
-        static const int RWORD_RETORNO = 8;
-        static const int RWORD_END = 9;
-        static const int RWORD_WHILE = 10;
-        static const int RWORD_ELIF = 11;
-        static const int RWORD_ELSE = 12;
-        static const int RWORD_IN = 13;
-        static const int RWORD_DESDE = 14;
-        static const int RWORD_TODO = 15;
-        static const int RWORD_NIL = 16;
-        static const int RWORD_LEER = 17;
+        static const int RWORD_LOG = 33;
+        static const int RWORD_FALSE = 34;
+        static const int RWORD_TRUE = 35;
+        static const int RWORD_IMPORTAR = 36;
+        static const int RWORD_FOR = 37;
+        static const int RWORD_IF = 38;
+        static const int RWORD_FUNCION = 39;
+        static const int RWORD_RETORNO = 40;
+        static const int RWORD_END = 41;
+        static const int RWORD_WHILE = 42;
+        static const int RWORD_ELIF = 43;
+        static const int RWORD_ELSE = 44;
+        static const int RWORD_IN = 45;
+        static const int RWORD_DESDE = 46;
+        static const int RWORD_TODO = 47;
+        static const int RWORD_NIL = 48;
+        static const int RWORD_LEER = 49;
 
         static const int T_OP = 1;
         static const int T_LEX = 2;
@@ -95,9 +94,7 @@ class Token {
         static int get_op_key(char c);
         static int get_op_comp_key(string c);
         static int get_res_word_key(string word);
-        static string get_res_word(int idx);
         static string get_key_name(int key);
-        static string key2str(int key);
 
         void set_key(int t) {
             t_key = t;
@@ -122,21 +119,21 @@ class Token {
         }
         
     private:    // TODO
-        static const string RESWORDS[];
+        static const string T[];
         static const string TOKNAMES[];
 };
 
-const string Token::TOKNAMES [Token::N_TOKENS] =
-    { "token_llave_izq", "token_llave_der", "token_comentario",
+const string Token::TOKNAMES [Token::N_TOKENS] = { 
+    // tokens
+    "token_llave_izq", "token_llave_der", "token_comentario",
     "token_cor_izq", "token_cor_der", "token_par_izq", "token_par_der",
     "token_mayor", "token_menor", "token_mayor_igual", "token_menor_igual",
     "token_igual_num", "token_point", "token_diff_num",
     "token_and", "token_or", "token_not", "token_mas", "token_menos", 
     "token_mul", "token_div", "token_mod", "token_pot", "token_assign",
     "token_dosp", "token_coma", "token_new_line", "token_string", "id",
-    "token_reserved_word", "token_integer", "token_float" };
-
-const string Token::RESWORDS [Token::N_RWORDS] = {
+    "token_reserved_word", "token_integer", "token_float",
+    // reserved words
     "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
     "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer"
 };
@@ -246,29 +243,17 @@ int Token::get_op_key(char c) {
 }
 
 int Token::get_res_word_key(string word) {
-    for(int i = 0; i < Token::N_RWORDS; i++) {
-        if(word == RESWORDS[i]) return i+1;
+    for(int i = Token::N_RWORDS-1; i < Token::N_TOKENS; i++) {
+        if(word == TOKNAMES[i]) return i+1;
     }    
     return -1;
 }
 
-string Token::get_res_word(int idx) {
-    idx--;
-    return (idx >= 0 && idx < Token::N_RWORDS) ? Token::RESWORDS[idx] : "ERROR_RWD";
-}
-
 void Token::print() {
-    switch(t_class) {
-        case T_OP:  // operand
-            cout << "<" << Token::get_key_name(t_key) << "," << line << "," << col << ">\n";
-            break;
-        case T_LEX: // lexeme
-            cout << "<" << Token::get_key_name(t_key) << "," << lexeme << "," << line << "," << col << ">\n";
-            break;
-        case T_RES:
-            cout << "<" << Token::get_res_word(t_key) << "," << line << "," << col << ">\n";
-            break;
-    }
+    cout << "<" << Token::get_key_name(t_key) << ",";
+    if(t_class == T_LEX)
+        cout << lexeme << ",";
+    cout << line << "," << col << ">\n";
 }
 
 bool is_number(char c) {
