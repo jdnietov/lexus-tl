@@ -54,7 +54,6 @@ class Token {
         static const int N_TOKENS = 49;
         static const int N_RWORDS = 33;
 
-        // FIXME: potential inconsistencies with this key model
         static const int TOKEN_LLAVE_IZQ = 1;   // {
         static const int TOKEN_LLAVE_DER = 2;   // }
         static const int TOKEN_COM = 3;         // #
@@ -313,10 +312,7 @@ Token get_next_token() {
                     global_state = is_letter(c) ? ESTADO_ID : ESTADO_INT;
                     buffer += c;
                     icol = ncol;
-                }
-                
-                else 
-                {
+                } else {
                     switch(c) {
                     case ' ': case '\t':
                         break;
@@ -330,8 +326,7 @@ Token get_next_token() {
                         Token op(Token::T_OP, Token::get_op_key(c), global_line_it, ncol);
                         global_col_it = ncol+1;
                         return op;
-                    }
-                    break;
+                    } break;
                     
                     case '<': case '>': case '=': case '&': case '!':
                     case '|':
@@ -364,24 +359,20 @@ Token get_next_token() {
                         } else {
                             cout << "*** ERROR: operand t_key is not defined, somehow? like, how the fuck did this happen?\n";
                         }
-                    }
-                    break;
+                    } break;
                     
                     case '"':
                     {
                         global_state = ESTADO_STRING;
                         icol = ncol;
-                    }
-                    break;
+                    } break;
                     
                     default:
                         global_col_it = ncol;
                         catch_error_lexico();
-                        break;
-                    }
+                    } break;
                 }
-            }
-            break;
+            } break;
             
             case ESTADO_STRING:
             {
@@ -392,8 +383,7 @@ Token get_next_token() {
                         global_state = ESTADO_INICIAL;
                         Token str(Token::T_LEX, Token::TOKEN_STRING, buffer, global_line_it, icol);
                         return str;
-                    }
-                    break;
+                    } break;
                         
                     default:
                     {
@@ -404,11 +394,9 @@ Token get_next_token() {
                                 catch_error_lexico();
                             }
                         }
-                    }
-                        break;
+                    } break;
                 }    
-            }
-            break;
+            } break;
             
             case ESTADO_ID:
             {
@@ -429,8 +417,7 @@ Token get_next_token() {
                     }
                     
                 }
-            }
-            break;
+            } break;
             
             case ESTADO_INT:
             {
@@ -445,8 +432,7 @@ Token get_next_token() {
                     Token number(Token::T_LEX, Token::TOKEN_INT, buffer, global_line_it, icol);
                     return number;
                 }
-            }
-            break;
+            } break;
             
             case ESTADO_FLOAT:  // TODO - read if next char is number too!
             {
@@ -458,8 +444,7 @@ Token get_next_token() {
                     Token flt(Token::T_LEX, Token::TOKEN_FLOAT, buffer, global_line_it, icol);
                     return flt;
                 }
-            }
-            break;
+            } break;
             
             default:    // error - automaton experienced an error
                 cout << "*** ERROR: Automaton error (reached undefined global_state)\n";
@@ -480,7 +465,7 @@ Token get_next_token() {
 
 // TODO: don't print key names, but actual characters
 void catch_error_sintactico(vector<int> expectedTokens) {
-    cout << '<' << global_line_it << ':' << global_col_it << "> Error sintactico."
+    cout << '<' << global_line_it << ':' << --global_col_it << "> Error sintactico."
         << " Encontrado: \'" << Token::get_key_name(currentToken.get_key())
         << "', se esperaba ";
     
@@ -498,6 +483,17 @@ void catch_error_sintactico(vector<int> expectedTokens) {
 
 class Grammar {
     public:
+        static void NUMBER() {
+            int tokenType = currentToken.get_key();
+
+            if(tokenType == Token::TOKEN_INT || tokenType == Token::TOKEN_FLOAT)
+                followup(tokenType);
+            else {
+                int expToks[] = {Token::TOKEN_INT, Token::TOKEN_FLOAT};
+                catch_error_sintactico(iarr2vec(expToks, 2));
+            }
+        }
+
         static void followup(int expectedKey) {
             if(currentToken.get_key() == expectedKey) {
                 //while((currentToken = get_next_token()).get_key() == Token::TOKEN_NEW_LINE);
@@ -505,23 +501,41 @@ class Grammar {
                 cout << "OK\n\n";
                 currentToken.print();
             } else {
-                catch_error_sintactico((vector<int> (1, expectedKey)));
+                int expToks[] = {expectedKey};
+                catch_error_sintactico(iarr2vec(expToks, 1));
             }
         }
 };
 
+/**
+ * countercases:
+ * true<5
+ * */
+
 class GrammarCond {
     private:
-        static const int N_OPCONDS = 7;
-        static bool isOpCond(int tokenKey) {
-            for(int i=0; i<N_OPCONDS; i++) {
-                if(OPCONDS[i] == tokenKey)
+        static const int N_OPBIN = 4;
+        static const int N_OPNUM = 5;
+
+        static bool isopbin(int tokenKey) {
+            for(int i=0; i<N_OPBIN; i++) {
+                if(ARR_OPBIN[i] == tokenKey)
+                    return true;
+            }
+            return false;
+        }
+
+        static bool isopnum(int tokenKey) {
+            for(int i=0; i<N_OPNUM; i++) {
+                if(ARR_OPNUM[i] == tokenKey)
                     return true;
             }
             return false;
         }
     public:
-        static int OPCONDS[N_OPCONDS];
+        static int ARR_OPBIN[N_OPBIN];
+        static int ARR_OPNUM[N_OPNUM];
+
         static void ID() {  // TODO: object fields, arrays...
             cout << "deriving from ID: \n";
             int tokenKey = currentToken.get_key();
@@ -533,10 +547,38 @@ class GrammarCond {
             }
         }
 
+        static void TFVAL() {
+            int tokenKey = currentToken.get_key();
+
+            if(tokenKey == Token::RWORD_TRUE || tokenKey == Token::RWORD_FALSE) {
+                Grammar::followup(tokenKey);
+                TFAPP();
+            } else {
+                int expToks[] = {Token::RWORD_TRUE, Token::RWORD_FALSE};
+                catch_error_sintactico(iarr2vec(expToks, 2));
+            }
+        }
+
+        static void TFAPP() {
+            int tokenKey = currentToken.get_key();
+
+            if(tokenKey == Token::TOKEN_PAR_DER) {  // FIXME: this feels wrong
+                return;
+            } else if(isopbin(tokenKey)) {
+                OPBIN();
+                COND();
+            } else {
+                vector<int> expToks = iarr2vec(ARR_OPBIN, N_OPBIN);
+                int tok = Token::TOKEN_PAR_DER;
+                expToks.push_back(tok);
+                catch_error_sintactico(expToks);
+            }
+        }
+
         static void XOP() {
             cout << "deriving from XOP: \n";
             int tokenKey = currentToken.get_key();
-            if(tokenKey == Token::TOKEN_ID || tokenKey == Token::TOKEN_INT) {
+            if(tokenKey == Token::TOKEN_ID || tokenKey == Token::TOKEN_INT || tokenKey == Token::TOKEN_FLOAT) {
                 Grammar::followup(tokenKey);
             } else {
                 int expToks[] = {Token::TOKEN_ID, Token::TOKEN_INT};
@@ -544,48 +586,43 @@ class GrammarCond {
             }
         }
 
-        static void OP_BIN_COND() {
-            cout << "deriving from OP_BIN_COND: \n";
+        static void OPBIN() {
+            cout << "deriving from OPBIN: \n";
             int tokenKey = currentToken.get_key();
-            if(isOpCond(tokenKey)) {
+            if(isopbin(tokenKey)) {
                 Grammar::followup(tokenKey);
             } else {
-                catch_error_sintactico(iarr2vec(OPCONDS, N_OPCONDS));
+                catch_error_sintactico(iarr2vec(ARR_OPBIN, N_OPBIN));
+            }
+        }
+
+        static void OPNUM() {
+            cout << "deriving from OPNUM: \n";
+            int tokenKey = currentToken.get_key();
+            if(isopnum(tokenKey)) {
+                Grammar::followup(tokenKey);
+            } else {
+                catch_error_sintactico(iarr2vec(ARR_OPNUM, N_OPNUM));
             }
         }
 
         static void CONDVAL() {
             cout << "deriving from CONDVAL\n";
-            int tokenClass = currentToken.get_class();
             int tokenKey = currentToken.get_key();
             
             if(tokenKey == Token::RWORD_TRUE || tokenKey == Token::RWORD_FALSE
-                || tokenKey == Token::TOKEN_ID || tokenKey == Token::TOKEN_INT) {
+                || tokenKey == Token::TOKEN_ID) {
                 Grammar::followup(tokenKey);
             } else if(tokenKey == Token::TOKEN_NEW_LINE) {
                 Grammar::followup(Token::TOKEN_NEW_LINE);
             } else {
-                int expToks[] = {Token::RWORD_TRUE, Token::RWORD_FALSE};    // TODO: 
-                catch_error_sintactico(iarr2vec(expToks, 2));
-            }
-        }
-
-        static void CONDAPP() {
-            cout << "deriving from CONDAPP\n";
-            int tokenKey = currentToken.get_key();
-
-            if(isOpCond(tokenKey)) {
-                OP_BIN_COND();
-                COND();
-            } else if(tokenKey == Token::TOKEN_NEW_LINE) {
-                Grammar::followup(Token::TOKEN_NEW_LINE);
-            } else {
-                int expToks[] = {Token::TOKEN_AND};
-                catch_error_sintactico(iarr2vec(expToks, 1));
+                int expToks[] = {Token::RWORD_TRUE, Token::RWORD_FALSE, Token::TOKEN_ID};
+                catch_error_sintactico(iarr2vec(expToks, 3));
             }
         }
 
         static void CONDNOT() {
+            cout << "deriving from CONDNOT\n";
             int tokenKey = currentToken.get_key();
 
             if(tokenKey == Token::TOKEN_ID) {
@@ -598,39 +635,103 @@ class GrammarCond {
             }
         }
 
+        static void CONDAPP() {
+            cout << "deriving from CONDAPP\n";
+            int tokenKey = currentToken.get_key();
+
+            if(isopbin(tokenKey)) {
+                OPBIN();
+                COND();
+            } else if(isopnum(tokenKey)) {
+                OPNUM();
+                XOP();
+            } else if(tokenKey == Token::TOKEN_NEW_LINE) {
+                Grammar::followup(Token::TOKEN_NEW_LINE);
+            } else if(tokenKey == Token::TOKEN_PAR_DER) {
+                return;
+            } else {
+                // TODO: incomplete report
+                int expToks[] = {Token::TOKEN_AND};
+                catch_error_sintactico(iarr2vec(expToks, 1));
+            }
+        }
+
         static void COND() {
             cout << "deriving from COND\n";
-            int tokenKey = currentToken.get_key();            
+            int tokenKey = currentToken.get_key();
 
-            if(tokenKey == Token::RWORD_TRUE || tokenKey == Token::RWORD_FALSE
-                || tokenKey == Token::TOKEN_ID || tokenKey == Token::TOKEN_INT) {
-                CONDVAL();
-                CONDAPP();
-            } else if(tokenKey == Token::TOKEN_NOT) {
-                Grammar::followup(Token::TOKEN_NOT);
-                CONDNOT();
-            } else if(tokenKey == Token::TOKEN_PAR_IZQ) {
-                Grammar::followup(Token::TOKEN_PAR_IZQ);
-                COND();
-                Grammar::followup(Token::TOKEN_PAR_DER);
-            } else {
-                int expToks[] = {Token::RWORD_TRUE, Token::RWORD_FALSE, Token::TOKEN_ID, 
-                Token::TOKEN_INT, Token::TOKEN_PAR_IZQ, Token::TOKEN_NOT};
-                catch_error_sintactico(iarr2vec(expToks, 6));
-            } 
+            switch(tokenKey) {
+                case Token::RWORD_TRUE: case Token::RWORD_FALSE:
+                {
+                    TFVAL();
+                    TFAPP();
+                } break;
+
+                case Token::TOKEN_ID:
+                {
+                    CONDVAL();
+                    CONDAPP();
+                } break;
+
+                case Token::TOKEN_INT:
+                {
+                    Grammar::followup(Token::TOKEN_INT);
+                    OPNUM();
+                    XOP();
+                } break;
+
+                case Token::TOKEN_NOT:
+                {
+                    Grammar::followup(Token::TOKEN_NOT);
+                    CONDNOT();
+                } break;
+
+                case Token::TOKEN_PAR_IZQ:
+                {
+                    Grammar::followup(Token::TOKEN_PAR_IZQ);
+                    COND();
+                    Grammar::followup(Token::TOKEN_PAR_DER);
+                } break;
+
+                default:
+                {
+                    int expToks[] = {Token::RWORD_TRUE, Token::RWORD_FALSE, Token::TOKEN_ID, 
+                    Token::TOKEN_INT, Token::TOKEN_PAR_IZQ, Token::TOKEN_NOT};
+                    catch_error_sintactico(iarr2vec(expToks, 6));
+                } break;
+            }
         }
 };
 
-int GrammarCond::OPCONDS[GrammarCond::N_OPCONDS] = {
-    Token::TOKEN_AND, Token::TOKEN_IGUAL_NUM, Token::TOKEN_MAYOR,
-    Token::TOKEN_MAYOR_IG, Token::TOKEN_MENOR, Token::TOKEN_MENOR_IG,
-    Token::TOKEN_OR
+int GrammarCond::ARR_OPBIN[GrammarCond::N_OPBIN] = {
+    Token::TOKEN_AND, Token::TOKEN_IGUAL_NUM, Token::TOKEN_OR,
+    Token::TOKEN_DIFF_NUM
 };
 
+int GrammarCond::ARR_OPNUM[GrammarCond::N_OPNUM] = {
+    Token::TOKEN_MAYOR_IG, Token::TOKEN_MENOR, Token::TOKEN_MENOR_IG,
+    Token::TOKEN_IGUAL_NUM, Token::TOKEN_DIFF_NUM
+};
+
+//
+// ─── IF STATEMENTS ──────────────────────────────────────────────────────────────
+//
+
+    
 class GrammarIf {
     public:
         static void IF() {
-            
+            int tokenKey = currentToken.get_key();
+
+            if(tokenKey == Token::RWORD_IF) {
+                Grammar::followup(Token::RWORD_IF);
+                Grammar::followup(Token::TOKEN_PAR_IZQ);
+                GrammarCond::COND();
+                Grammar::followup(Token::TOKEN_PAR_DER);
+            } else {
+                int expToks[] = {Token::RWORD_IF};
+                catch_error_sintactico(iarr2vec(expToks, 1));
+            }
         }
 };
 
@@ -648,7 +749,7 @@ int main (int argc, char *argv[]) {
             if(global_state == ESTADO_INICIAL) {
                 cout << '\n';
                 currentToken.print();
-                GrammarCond::COND();
+                GrammarIf::IF();
                 cout << "done.\n************\n";
             }
         }
