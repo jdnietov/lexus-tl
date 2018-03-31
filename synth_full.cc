@@ -118,6 +118,7 @@ class Token {
         static int get_op_comp_key(string c);
         static int get_res_word_key(string word);
         static string get_key_name(int key);
+        static string get_key_str(int key);
 
         void set_key(int t) {
             t_key = t;
@@ -141,8 +142,8 @@ class Token {
             return col;
         }
         
-    private:    // TODO
-        static const string T[];
+    private:
+        static const string TOKNSTRS[];
         static const string TOKNAMES[];
 };
 
@@ -157,6 +158,15 @@ const string Token::TOKNAMES [Token::N_TOKENS] = {
     "token_dosp", "token_coma", "token_new_line", "token_string", "id",
     "token_reserved_word", "token_integer", "token_float",
     // reserved words
+    "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
+    "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer"
+};
+
+const string Token::TOKNSTRS [Token::N_TOKENS] = {
+    "(", ")", "#", "[", "]", "(", ")", ">", "<", ">=", "<=", "==", ".", "!=",
+    "&&", "||", "!", "+", "-", "*", "/", "%", "^", "=", ":", ",", "\n",
+    "valor_string", "identificador", "ERROR", "valor_entero", "valor_float",
+    // TODO: don't repeat data!
     "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
     "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer"
 };
@@ -194,8 +204,11 @@ Token::Token(int cla, int key, std::string lex, int lin, int co) {
 }
 
 string Token::get_key_name(int key) {
-    key--;
-    return (key >= 0 && key < Token::N_TOKENS) ? Token::TOKNAMES[key] : "ERROR_TKN";
+    return (key > 0 && key <= Token::N_TOKENS) ? Token::TOKNAMES[--key] : "ERROR_TKN";
+}
+
+string Token::get_key_str(int key) {
+    return (key > 0 && key <= Token::N_TOKENS) ? Token::TOKNSTRS[--key] : "ERROR_STR";
 }
 
 int Token::get_op_comp_key(string s) {
@@ -463,16 +476,15 @@ Token get_next_token() {
 // ────────────────────────────────────────────────────────────────────────────────
 //
 
-// TODO: don't print key names, but actual characters
 void catch_error_sintactico(vector<int> expectedTokens) {
     cout << '<' << global_line_it << ':' << --global_col_it << "> Error sintactico."
-        << " Encontrado: \'" << Token::get_key_name(currentToken.get_key())
+        << " Encontrado: \'" << Token::get_key_str(currentToken.get_key())
         << "', se esperaba ";
     
     // order lexicographically
     sort(expectedTokens.begin(), expectedTokens.end());
     for(int i=0; i<expectedTokens.size(); i++) {
-        cout << '\'' << Token::get_key_name(expectedTokens[i]) << "'";
+        cout << '\'' << Token::get_key_str(expectedTokens[i]) << "'";
         if(i==expectedTokens.size()-1)
             cout << '\n';
         else
