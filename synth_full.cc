@@ -495,35 +495,35 @@ void catch_error_sintactico(int *expectedTokens, int size) {
 }
 
 class Grammar {
+    private:
+        static const int N_MATHOP = 7;
+        static int ARR_MATHOP[N_MATHOP];
+
     public:
+        static bool ismathop(int key) {
+            for(int i=0; i<N_MATHOP; i++) {
+                if(ARR_MATHOP[i] == key)
+                    return true;
+            }
+            return false;
+        }
+
         static bool isparamval(int key) {
             return key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_STRING
                 || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE || key == Token::TOKEN_ID;
         }
 
-        static void IDX() {
+        static void CALL() {
+            cout << "deriving from CALL\n";
             int key = currentToken.get_key();
 
-            if(key == Token::TOKEN_ID) {
-                IDCALL();
-            } else if(key == Token::TOKEN_INT) {
-                followup(Token::TOKEN_INT);
+            if(key == Token::TOKEN_PAR_IZQ) {
+                followup(Token::TOKEN_PAR_IZQ);
+                PARAMS();
+                followup(Token::TOKEN_PAR_DER);
             } else {
-                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT};
-                catch_error_sintactico(exptoks, 2);
-            }
-        }
-
-        static void IDNEXT() {// TODO: arrays
-            int key = currentToken.get_key();
-            if(key == Token::TOKEN_POINT) {
-                followup(Token::TOKEN_POINT);
-                followup(Token::TOKEN_ID);
-                IDNEXT();
-            } else if(key == Token::TOKEN_COR_IZQ) {
-                followup(Token::TOKEN_COR_IZQ);
-                IDX();
-                followup(Token::TOKEN_COR_DER);
+                int exptoks[] = {Token::TOKEN_PAR_IZQ};
+                catch_error_sintactico(exptoks, 1);
             }
         }
 
@@ -539,14 +539,6 @@ class Grammar {
             }
         }
 
-        static void IDCALLNEXT() {
-            int key = currentToken.get_key();
-
-            if(key == Token::TOKEN_PAR_IZQ) {
-                CALL();
-            } else return;  // TODO:
-        }
-
         static void IDCALL() {
             int key = currentToken.get_key();
 
@@ -558,30 +550,97 @@ class Grammar {
             }
         }
 
-        static void PARAMVAL() {
+        static void IDCALLNEXT() {
             int key = currentToken.get_key();
-            
-            if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_STRING
-                || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE) {
-                Grammar::followup(key);
-            } else if(key == Token::TOKEN_ID) {
-                IDCALL();
-            } else {
-                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT,
-                    Token::TOKEN_STRING, Token::RWORD_TRUE, Token::RWORD_FALSE};
-                catch_error_sintactico(exptoks, 6);
+
+            if(key == Token::TOKEN_PAR_IZQ) {
+                CALL();
+            } else return;  // TODO:
+        }
+
+        static void IDNEXT() {
+            int key = currentToken.get_key();
+            if(key == Token::TOKEN_POINT) {
+                followup(Token::TOKEN_POINT);
+                followup(Token::TOKEN_ID);
+                IDNEXT();
+            } else if(key == Token::TOKEN_COR_IZQ) {
+                followup(Token::TOKEN_COR_IZQ);
+                IDX();
+                followup(Token::TOKEN_COR_DER);
             }
         }
 
-        static void PARAMSNEXT() {
-            cout << "deriving from PARAMSNEXT\n";
+        static void IDNUMBER() {
             int key = currentToken.get_key();
 
-            if(key == Token::TOKEN_COMMA) {
-                Grammar::followup(Token::TOKEN_COMMA);
-                PARAMS();
-            } else if(key == Token::TOKEN_PAR_DER) {
+            if(key == Token::TOKEN_ID) {
+                IDCALL();
+            } else if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
+                NUMBER();
+            } else {
+                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT};
+                catch_error_sintactico(exptoks,3);
+            }
+        }
+
+        static void IDX() {
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_ID) {
+                IDCALL();
+            } else if(key == Token::TOKEN_INT) {
+                followup(Token::TOKEN_INT);
+            } else {
+                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT};
+                catch_error_sintactico(exptoks, 2);
+            }
+        }
+
+        static void INITMATHNEXT() {
+            int key = currentToken.get_key();
+
+            if(ismathop(key)) {
+                MATHOP();
+                INITMATH();
+            } else if(key == Token::TOKEN_COMMA || key == Token::TOKEN_PAR_DER) {
                 return;
+            } else {
+                catch_error_sintactico(ARR_MATHOP, N_MATHOP);
+            }
+        }
+
+        static void INITMATH() {
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_ID) {
+                IDNUMBER();
+                INITMATHNEXT();
+            } else {
+                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT};
+                catch_error_sintactico(exptoks,3);
+            }
+        }
+
+        static void MATHOP() {
+            cout << "deriving from MATHOP\n";
+            int key = currentToken.get_key();
+            
+            if(ismathop(key)) {
+                Grammar::followup(key);
+            } else {
+                catch_error_sintactico(ARR_MATHOP, N_MATHOP);
+            }
+        }
+        
+        static void NUMBER() {
+            int tokenType = currentToken.get_key();
+
+            if(tokenType == Token::TOKEN_INT || tokenType == Token::TOKEN_FLOAT)
+                followup(tokenType);
+            else {
+                int expToks[] = {Token::TOKEN_INT, Token::TOKEN_FLOAT};
+                catch_error_sintactico(expToks, 2);
             }
         }
 
@@ -599,28 +658,32 @@ class Grammar {
             }
         }
 
-        static void CALL() {
-            cout << "deriving from CALL\n";
+        static void PARAMSNEXT() {
+            cout << "deriving from PARAMSNEXT\n";
             int key = currentToken.get_key();
 
-            if(key == Token::TOKEN_PAR_IZQ) {
-                followup(Token::TOKEN_PAR_IZQ);
+            if(key == Token::TOKEN_COMMA) {
+                Grammar::followup(Token::TOKEN_COMMA);
                 PARAMS();
-                followup(Token::TOKEN_PAR_DER);
-            } else {
-                int exptoks[] = {Token::TOKEN_PAR_IZQ};
-                catch_error_sintactico(exptoks, 1);
+            } else if(key == Token::TOKEN_PAR_DER) {
+                return;
             }
         }
 
-        static void NUMBER() {
-            int tokenType = currentToken.get_key();
-
-            if(tokenType == Token::TOKEN_INT || tokenType == Token::TOKEN_FLOAT)
-                followup(tokenType);
-            else {
-                int expToks[] = {Token::TOKEN_INT, Token::TOKEN_FLOAT};
-                catch_error_sintactico(expToks, 2);
+        static void PARAMVAL() {
+            int key = currentToken.get_key();
+            
+            if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
+                INITMATH(); // TODO: ids shared between conditionals and math!
+            } else if(key == Token::TOKEN_STRING
+                || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE) {
+                Grammar::followup(key);
+            } else if(key == Token::TOKEN_ID) {
+                IDCALL();
+            } else {
+                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT,
+                    Token::TOKEN_STRING, Token::RWORD_TRUE, Token::RWORD_FALSE};
+                catch_error_sintactico(exptoks, 6);
             }
         }
 
@@ -635,6 +698,11 @@ class Grammar {
                 catch_error_sintactico(expToks, 1);
             }
         }
+};
+
+int Grammar::ARR_MATHOP[] = {
+    Token::TOKEN_MAS, Token::TOKEN_MENOS, Token::TOKEN_MUL, Token::TOKEN_DIV,
+    Token::TOKEN_POT, Token::TOKEN_MOD, Token::TOKEN_ASSIGN
 };
 
 //
@@ -862,17 +930,8 @@ class GrammarImport {
     
 class GrammarInst {
     private:
-        static const int N_MATHOP = 7;
         static const int N_RWFUNC = 2;
         
-        static bool ismathop(int key) {
-            for(int i=0; i<N_MATHOP; i++) {
-                if(ARR_MATHOP[i] == key)
-                    return true;
-            }
-            return false;
-        }
-
         static bool isrwfunc(int key) {
             for(int i=0; i<N_RWFUNC; i++) {
                 if(ARR_RWFUNC[i] == key)
@@ -895,25 +954,14 @@ class GrammarInst {
             }
         }
 
-        static void MATHOP() {
-            cout << "deriving from MATHOP\n";
-            int key = currentToken.get_key();
-            
-            if(ismathop(key)) {
-                Grammar::followup(key);
-            } else {
-                catch_error_sintactico(ARR_MATHOP, N_MATHOP);
-            }
-        }
-
         static void INSTNEXT() {
             cout << "deriving from INSTNEXT\n";
             int key = currentToken.get_key();
 
             if(key == Token::TOKEN_PAR_IZQ) {
                 Grammar::CALL();
-            } else if(ismathop(key)) {
-                MATHOP();
+            } else if(Grammar::ismathop(key)) {
+                Grammar::MATHOP();
                 Grammar::PARAMVAL();
             } else if(key == Token::TOKEN_NEW_LINE || key == Token::TOKEN_PAR_DER) {   // FIXME: still wrong
                 return;
@@ -1022,15 +1070,14 @@ class GrammarProgram {
         }
 };
 
-int GrammarInst::ARR_MATHOP[] = {
-    Token::TOKEN_MAS, Token::TOKEN_MENOS, Token::TOKEN_MUL, Token::TOKEN_DIV,
-    Token::TOKEN_POT, Token::TOKEN_MOD, Token::TOKEN_ASSIGN
-};
-
 int GrammarInst::ARR_RWFUNC[] = {
     Token::RWORD_LEER, Token::RWORD_LOG
 };
 
+/**
+ * TODO: COUNTEREXAMPLES NOT COVERED YET:
+ * - "lala" (solitary identifiers)
+ * */
 int main (int argc, char *argv[]) {
     global_state = ESTADO_INICIAL;
     global_line_it = 1;
