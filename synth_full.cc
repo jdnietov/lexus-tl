@@ -610,12 +610,16 @@ class Grammar {
             }
         }
 
-        static void INITMATH() {
+        static void INITMATH() {    // TODO: can't begin with IDs so far
             int key = currentToken.get_key();
 
             if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_ID) {
                 IDNUMBER();
                 INITMATHNEXT();
+            } else if(key == Token::TOKEN_PAR_IZQ) {
+                followup(Token::TOKEN_PAR_IZQ);
+                INITMATH();
+                followup(Token::TOKEN_PAR_DER);
             } else {
                 int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT};
                 catch_error_sintactico(exptoks,3);
@@ -655,6 +659,10 @@ class Grammar {
                 || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE) {
                 Grammar::PARAMVAL();
                 PARAMSNEXT();
+            } else if(key == Token::TOKEN_PAR_IZQ) {
+                followup(Token::TOKEN_PAR_IZQ);
+                STAT();
+                followup(Token::TOKEN_PAR_DER);
             }
         }
 
@@ -680,10 +688,30 @@ class Grammar {
                 Grammar::followup(key);
             } else if(key == Token::TOKEN_ID) {
                 IDCALL();
+                STATIDNEXT();
             } else {
                 int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT,
                     Token::TOKEN_STRING, Token::RWORD_TRUE, Token::RWORD_FALSE};
                 catch_error_sintactico(exptoks, 6);
+            }
+        }
+
+        static void STAT() {
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_ID) {
+                IDCALL();
+                STATIDNEXT();
+            }
+        }
+
+        static void STATIDNEXT() {
+            int key = currentToken.get_key();
+
+            if(ismathop(key)) {
+                INITMATHNEXT();
+            } else {
+                // TODO: report
             }
         }
 
