@@ -527,6 +527,50 @@ class Grammar {
             }
         }
 
+        static void CALLIDLISTNEXT() {
+            cout << "deriving from CALLIDLISTNEXT\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_COMMA) {
+                followup(Token::TOKEN_COMMA);
+                followup(Token::TOKEN_ID);
+            } else if(key == Token::TOKEN_PAR_DER) {
+                return;
+            } else {
+                int exptoks[] = {Token::TOKEN_PAR_DER, Token::TOKEN_COMMA};
+                catch_error_sintactico(exptoks, 2);
+            }
+        }
+
+        static void CALLIDLIST() {
+            cout << "deriving from CALLIDLIST\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_PAR_DER) {
+                return;
+            } else if(key == Token::TOKEN_ID) {
+                followup(Token::TOKEN_ID);
+                CALLIDLISTNEXT();
+            } else {
+                int exptoks[] = {Token::TOKEN_PAR_DER, Token::TOKEN_ID};
+                catch_error_sintactico(exptoks, 2);
+            }
+        }
+
+        static void CALLIDS() {
+            cout << "deriving from CALLIDS\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_PAR_IZQ) {
+                followup(Token::TOKEN_PAR_IZQ);
+                CALLIDLIST();
+                followup(Token::TOKEN_PAR_DER);
+            } else {
+                int exptoks[] = {Token::TOKEN_PAR_IZQ};
+                catch_error_sintactico(exptoks, 1);
+            }
+        }
+
         static void ID() {  
             cout << "deriving from ID: \n";
             int tokenKey = currentToken.get_key();
