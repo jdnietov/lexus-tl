@@ -327,9 +327,8 @@ Token get_next_token() {
                     
                     // one-character operators
                     case '{': case '}': case '[': case ']': case '(':
-                    case ')': case '.': case '+': case '-': case '*':
-                    case '/': case '%': case '^': case ':': case ',':
-                    case '\n':
+                    case ')': case '+': case '-': case '*': case '/': 
+                    case '%': case '^': case ':': case ',': case '\n':
                     {
                         Token op(Token::T_OP, Token::get_op_key(c), global_line_it, ncol);
                         global_col_it = ncol+1;
@@ -375,6 +374,13 @@ Token get_next_token() {
                         icol = ncol;
                     } break;
                     
+                    case '.':
+                    {
+                        global_state = ESTADO_FLOAT;
+                        icol = ncol;
+                        buffer = "0.";
+                    } break;
+
                     default:
                         global_col_it = ncol;
                         catch_error_lexico();
@@ -490,28 +496,120 @@ void catch_error_sintactico(int *expectedTokens, int size) {
 
 class Grammar {
     public:
-        static void ID() {  // TODO: object fields, arrays...
+        static bool isparamval(int key) {
+            return key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_STRING
+                || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE || key == Token::TOKEN_ID;
+        }
+
+        static void IDX() {
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_ID) {
+                IDCALL();
+            } else if(key == Token::TOKEN_INT) {
+                followup(Token::TOKEN_INT);
+            } else {
+                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT};
+                catch_error_sintactico(exptoks, 2);
+            }
+        }
+
+        static void IDNEXT() {// TODO: arrays
+            int key = currentToken.get_key();
+            if(key == Token::TOKEN_POINT) {
+                followup(Token::TOKEN_POINT);
+                followup(Token::TOKEN_ID);
+                IDNEXT();
+            } else if(key == Token::TOKEN_COR_IZQ) {
+                followup(Token::TOKEN_COR_IZQ);
+                IDX();
+                followup(Token::TOKEN_COR_DER);
+            }
+        }
+
+        static void ID() {  
             cout << "deriving from ID: \n";
             int tokenKey = currentToken.get_key();
             if(tokenKey == Token::TOKEN_ID) {
-                Grammar::followup(tokenKey);
+                followup(tokenKey);
+                IDNEXT();
             } else {
                 int expToks[] = {Token::TOKEN_ID};
                 catch_error_sintactico(expToks, 1);
             }
         }
 
+        static void IDCALLNEXT() {
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_PAR_IZQ) {
+                CALL();
+            } else return;  // TODO:
+        }
+
+        static void IDCALL() {
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_ID) {
+                ID();
+                IDCALLNEXT();
+            } else {
+                // TODO:
+            }
+        }
+
         static void PARAMVAL() {
             int key = currentToken.get_key();
             
-            if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_STRING) {
+            if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_STRING
+                || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE) {
                 Grammar::followup(key);
             } else if(key == Token::TOKEN_ID) {
-                ID();
+                IDCALL();
             } else {
                 int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT,
-                    Token::TOKEN_STRING};
-                catch_error_sintactico(exptoks, 4);
+                    Token::TOKEN_STRING, Token::RWORD_TRUE, Token::RWORD_FALSE};
+                catch_error_sintactico(exptoks, 6);
+            }
+        }
+
+        static void PARAMSNEXT() {
+            cout << "deriving from PARAMSNEXT\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_COMMA) {
+                Grammar::followup(Token::TOKEN_COMMA);
+                PARAMS();
+            } else if(key == Token::TOKEN_PAR_DER) {
+                return;
+            }
+        }
+
+        static void PARAMS() {
+            cout << "deriving from PARAMS\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_PAR_DER) {   // FIXME: just, ugh.
+                return;
+            } else if(key == Token::TOKEN_ID || key == Token::TOKEN_FLOAT
+                || key == Token::TOKEN_STRING || key == Token::TOKEN_INT
+                || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE) {
+                Grammar::PARAMVAL();
+                PARAMSNEXT();
+            }
+        }
+
+        static void CALL() {
+            cout << "deriving from CALL\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_PAR_IZQ) {
+                followup(Token::TOKEN_PAR_IZQ);
+                PARAMS();
+                followup(Token::TOKEN_PAR_DER);
+            } else {
+                int exptoks[] = {Token::TOKEN_PAR_IZQ};
+                catch_error_sintactico(exptoks, 1);
             }
         }
 
@@ -548,6 +646,9 @@ class GrammarCond {
     private:
         static const int N_OPBIN = 4;
         static const int N_OPNUM = 5;
+    public:
+        static int ARR_OPBIN[N_OPBIN];
+        static int ARR_OPNUM[N_OPNUM];
 
         static bool isopbin(int tokenKey) {
             for(int i=0; i<N_OPBIN; i++) {
@@ -564,9 +665,6 @@ class GrammarCond {
             }
             return false;
         }
-    public:
-        static int ARR_OPBIN[N_OPBIN];
-        static int ARR_OPNUM[N_OPNUM];
 
         static void TFVAL() {
             int tokenKey = currentToken.get_key();
@@ -597,17 +695,6 @@ class GrammarCond {
             }
         }
 
-        // static void XOP() {
-        //     cout << "deriving from XOP: \n";
-        //     int tokenKey = currentToken.get_key();
-        //     if(tokenKey == Token::TOKEN_ID || tokenKey == Token::TOKEN_INT || tokenKey == Token::TOKEN_FLOAT) {
-        //         Grammar::followup(tokenKey);
-        //     } else {
-        //         int expToks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT};
-        //         catch_error_sintactico(expToks, 3);
-        //     }
-        // }
-
         static void OPBIN() {
             cout << "deriving from OPBIN: \n";
             int tokenKey = currentToken.get_key();
@@ -625,21 +712,6 @@ class GrammarCond {
                 Grammar::followup(tokenKey);
             } else {
                 catch_error_sintactico(ARR_OPNUM, N_OPNUM);
-            }
-        }
-
-        static void CONDVAL() {
-            cout << "deriving from CONDVAL\n";
-            int tokenKey = currentToken.get_key();
-            
-            if(tokenKey == Token::RWORD_TRUE || tokenKey == Token::RWORD_FALSE
-                || tokenKey == Token::TOKEN_ID) {
-                Grammar::followup(tokenKey);
-            } else if(tokenKey == Token::TOKEN_NEW_LINE) {
-                Grammar::followup(Token::TOKEN_NEW_LINE);
-            } else {
-                int expToks[] = {Token::RWORD_TRUE, Token::RWORD_FALSE, Token::TOKEN_ID};
-                catch_error_sintactico(expToks, 3);
             }
         }
 
@@ -691,7 +763,7 @@ class GrammarCond {
 
                 case Token::TOKEN_ID:
                 {
-                    CONDVAL();
+                    Grammar::IDCALL();
                     CONDNEXT();
                 } break;
 
@@ -743,6 +815,7 @@ int GrammarCond::ARR_OPNUM[GrammarCond::N_OPNUM] = {
 class GrammarIf {
     public:
         static void IF() {
+            cout << "deriving from IF\n";
             int tokenKey = currentToken.get_key();
 
             if(tokenKey == Token::RWORD_IF) {
@@ -758,13 +831,38 @@ class GrammarIf {
 };
 
 //
+// ─── IMPORTING ──────────────────────────────────────────────────────────────────
+//
+
+    
+class GrammarImport {
+    public:
+        static void IMPORT() {
+            int key = currentToken.get_key();
+
+            if(key == Token::RWORD_IMPORTAR) {
+                Grammar::followup(Token::RWORD_IMPORTAR);
+                Grammar::ID();
+            } else if(key == Token::RWORD_DESDE) {
+                Grammar::followup(Token::RWORD_DESDE);
+                Grammar::ID();
+                Grammar::followup(Token::RWORD_IMPORTAR);
+                Grammar::ID();
+            } else {
+                int exptoks[] = {Token::RWORD_IMPORTAR};
+                catch_error_sintactico(exptoks, 1);
+            }
+        }
+};
+
+//
 // ─── INSTRUCTIONS ───────────────────────────────────────────────────────────────
 //
 
     
 class GrammarInst {
     private:
-        static const int N_MATHOP = 6;
+        static const int N_MATHOP = 7;
         static const int N_RWFUNC = 2;
         
         static bool ismathop(int key) {
@@ -808,60 +906,20 @@ class GrammarInst {
             }
         }
 
-        static void PARAMSNEXT() {
-            cout << "deriving from PARAMSNEXT\n";
-            int key = currentToken.get_key();
-
-            if(key == Token::TOKEN_COMMA) {
-                Grammar::followup(Token::TOKEN_COMMA);
-                Grammar::PARAMVAL();
-                PARAMSNEXT();
-            } else if(key == Token::TOKEN_PAR_DER) {    // FIXME: /sigh
-                return;
-            } else {
-                int expToks[] = {Token::TOKEN_COMMA, Token::TOKEN_PAR_DER};
-                catch_error_sintactico(expToks, 2);
-            }
-        }
-
-        static void PARAMS() {
-            cout << "deriving from PARAMS\n";
-            int key = currentToken.get_key();
-
-            if(key == Token::TOKEN_PAR_DER) {   // FIXME: just, ugh.
-                return;
-            } else if(key == Token::TOKEN_ID || key == Token::TOKEN_FLOAT
-                || key == Token::TOKEN_STRING || key == Token::TOKEN_INT) {
-                Grammar::PARAMVAL();
-                PARAMSNEXT();
-            }
-        }
-
-        static void CALL() {
-            cout << "deriving from CALL\n";
-            int key = currentToken.get_key();
-
-            if(key == Token::TOKEN_PAR_IZQ) {
-                Grammar::followup(Token::TOKEN_PAR_IZQ);
-                PARAMS();
-                Grammar::followup(Token::TOKEN_PAR_DER);
-            } else {
-                int exptoks[] = {Token::TOKEN_PAR_IZQ};
-                catch_error_sintactico(exptoks, 1);
-            }
-        }
-
         static void INSTNEXT() {
             cout << "deriving from INSTNEXT\n";
             int key = currentToken.get_key();
 
             if(key == Token::TOKEN_PAR_IZQ) {
-                CALL();
+                Grammar::CALL();
             } else if(ismathop(key)) {
                 MATHOP();
-                Grammar::ID();
-            } else if(key == Token::TOKEN_NEW_LINE || Token::TOKEN_PAR_DER) {   // FIXME: still wrong
+                Grammar::PARAMVAL();
+            } else if(key == Token::TOKEN_NEW_LINE || key == Token::TOKEN_PAR_DER) {   // FIXME: still wrong
                 return;
+            } else {
+                int exptoks[] = {Token::TOKEN_PAR_IZQ, Token::TOKEN_POINT, Token::TOKEN_NEW_LINE};
+                catch_error_sintactico(exptoks, 3);
             }
         }
 
@@ -881,17 +939,92 @@ class GrammarInst {
                 Grammar::followup(Token::TOKEN_PAR_DER);
             } else if(isrwfunc(key)) {
                 RWFUNC();
-                CALL();
+                Grammar::CALL();
+            } else if(key == Token::RWORD_IMPORTAR || key == Token::RWORD_DESDE) {
+                GrammarImport::IMPORT();
             } else {
                 int exptoks[] = {-1};   // TODO: actual values
                 catch_error_sintactico(exptoks, 1);
+            } 
+        }
+        
+
+        static void INSTS() {
+            cout << "deriving from INSTS\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_ID || key == Token::RWORD_IF || isrwfunc(key)
+                || key == Token::RWORD_IMPORTAR || key == Token::RWORD_DESDE
+                || key == Token::RWORD_WHILE) {
+                INST();
+                INSTS();
+            } else if(key == Token::TOKEN_NEW_LINE) {
+                return;
+            } else {
+                int exptoks[] = {Token::TOKEN_ID, Token::RWORD_IF, Token::RWORD_WHILE}; // TODO: complete
+                catch_error_sintactico(exptoks, 3);
+            }
+        }
+};
+
+class GrammarFunc {
+    public:
+        static void XPARAMVAL() {
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_NEW_LINE) {
+                return;
+            } else if(key == Token::TOKEN_ID) {
+                Grammar::PARAMVAL();
+            }
+        }
+
+        static void FUNC() {
+            cout << "deriving from FUNC\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::RWORD_FUNCION) {
+                Grammar::followup(Token::RWORD_FUNCION);
+                Grammar::followup(Token::TOKEN_ID);
+                Grammar::CALL();
+                Grammar::followup(Token::TOKEN_LLAVE_IZQ);
+                Grammar::followup(Token::TOKEN_NEW_LINE);
+                GrammarInst::INSTS();
+                Grammar::followup(Token::RWORD_RETORNO);
+                XPARAMVAL();
+                Grammar::followup(Token::TOKEN_LLAVE_DER);
+            }
+        }
+
+        static void FUNCS() {
+            cout << "deriving from FUNCS\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::RWORD_FUNCION) {
+                FUNC();
+                Grammar::followup(Token::TOKEN_NEW_LINE);
+                FUNCS();
+            } else return;  // TODO: this doesn't look right
+        }
+};
+
+class GrammarProgram {
+    public:
+        static void PROGRAM() {
+            int key = currentToken.get_key();
+
+            if(key == Token::RWORD_FUNCION) {
+                GrammarFunc::FUNCS();
+                GrammarInst::INSTS();
+            } else {
+                GrammarInst::INSTS();
             }
         }
 };
 
 int GrammarInst::ARR_MATHOP[] = {
     Token::TOKEN_MAS, Token::TOKEN_MENOS, Token::TOKEN_MUL, Token::TOKEN_DIV,
-    Token::TOKEN_POT, Token::TOKEN_MOD
+    Token::TOKEN_POT, Token::TOKEN_MOD, Token::TOKEN_ASSIGN
 };
 
 int GrammarInst::ARR_RWFUNC[] = {
@@ -912,7 +1045,7 @@ int main (int argc, char *argv[]) {
             if(global_state == ESTADO_INICIAL) {
                 cout << '\n';
                 currentToken.print();
-                GrammarInst::INST();
+                GrammarProgram::PROGRAM();
                 cout << "done.\n************\n";
             }
         }

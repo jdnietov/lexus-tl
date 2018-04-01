@@ -310,9 +310,8 @@ Token get_next_token() {
                     
                     // one-character operators
                     case '{': case '}': case '[': case ']': case '(':
-                    case ')': case '.': case '+': case '-': case '*':
-                    case '/': case '%': case '^': case ':': case ',':
-                    case '\n':
+                    case ')': case '+': case '-': case '*': case '/': 
+                    case '%': case '^': case ':': case ',': case '\n':
                     {
                         Token op(Token::T_OP, Token::get_op_key(c), global_line_it, ncol);
                         global_col_it = ncol+1;
@@ -360,6 +359,13 @@ Token get_next_token() {
                         icol = ncol;
                     }
                     break;
+
+                    case '.':
+                    {
+                        global_state = ESTADO_FLOAT;
+                        icol = ncol;
+                        buffer = "0.";
+                    } break;
                     
                     default:
                         global_col_it = ncol;
@@ -459,15 +465,21 @@ Token get_next_token() {
     return token;
 }
 
+bool tl_getline() {
+    if(getline(cin, global_line)) {
+        global_line+='\n';
+        global_col_it = 1;
+        return true;
+    }
+    return false;
+}
+
 int main (int argc, char *argv[]) {
     global_state = ESTADO_INICIAL;
     global_line_it = 1;
     queue<Token> tokens;
     
-    while ( getline (cin,global_line) ) {
-        global_line+='\n';
-        global_col_it = 1;
-        // cout << global_line << '\n';
+    while ( tl_getline() ) {
 
         while(global_col_it > 0 && global_col_it <= global_line.length()) {
             Token token = get_next_token();
