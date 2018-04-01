@@ -496,13 +496,15 @@ void catch_error_sintactico(int *expectedTokens, int size) {
 
 class Grammar {
     private:
-        static const int N_MATHOP = 7;
-        static int ARR_MATHOP[N_MATHOP];
+        static const int N_OPMATH = 7;
+        static int ARR_OPMATH[N_OPMATH];
 
+        static const int N_OPSTRCMP = 2;
+        static int ARR_OPSTRCMP[N_OPSTRCMP];
     public:
         static bool ismathop(int key) {
-            for(int i=0; i<N_MATHOP; i++) {
-                if(ARR_MATHOP[i] == key)
+            for(int i=0; i<N_OPMATH; i++) {
+                if(ARR_OPMATH[i] == key)
                     return true;
             }
             return false;
@@ -650,7 +652,7 @@ class Grammar {
             } else if(key == Token::TOKEN_COMMA || key == Token::TOKEN_PAR_DER) {
                 return;
             } else {
-                catch_error_sintactico(ARR_MATHOP, N_MATHOP);
+                catch_error_sintactico(ARR_OPMATH, N_OPMATH);
             }
         }
 
@@ -677,7 +679,7 @@ class Grammar {
             if(ismathop(key)) {
                 Grammar::followup(key);
             } else {
-                catch_error_sintactico(ARR_MATHOP, N_MATHOP);
+                catch_error_sintactico(ARR_OPMATH, N_OPMATH);
             }
         }
         
@@ -723,6 +725,7 @@ class Grammar {
         }
 
         static void PARAMVAL() {
+            cout << "deriving from PARAMVAL\n";
             int key = currentToken.get_key();
             
             if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
@@ -741,15 +744,27 @@ class Grammar {
         }
 
         static void STAT() {
+            cout << "deriving from STAT\n";
             int key = currentToken.get_key();
 
             if(key == Token::TOKEN_ID) {
                 IDCALL();
                 STATIDNEXT();
+            } else if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
+                NUMBER();
+                STATIDNEXT();
+            } else if(key == Token::TOKEN_PAR_IZQ) {
+                followup(Token::TOKEN_PAR_IZQ);
+                STAT();
+                followup(Token::TOKEN_PAR_DER);
+            } else {
+                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT, Token::TOKEN_PAR_IZQ};
+                catch_error_sintactico(exptoks, 4);
             }
         }
 
         static void STATIDNEXT() {
+            cout << "deriving from STATIDNEXT\n";
             int key = currentToken.get_key();
 
             if(ismathop(key)) {
@@ -772,9 +787,13 @@ class Grammar {
         }
 };
 
-int Grammar::ARR_MATHOP[] = {
+int Grammar::ARR_OPMATH[Grammar::N_OPMATH] = {
     Token::TOKEN_MAS, Token::TOKEN_MENOS, Token::TOKEN_MUL, Token::TOKEN_DIV,
     Token::TOKEN_POT, Token::TOKEN_MOD, Token::TOKEN_ASSIGN
+};
+
+int Grammar::ARR_OPSTRCMP[Grammar::N_OPSTRCMP] = {
+    Token::TOKEN_IGUAL_NUM, Token::TOKEN_DIFF_NUM
 };
 
 //
@@ -901,9 +920,9 @@ class GrammarCond {
                     TFNEXT();
                 } break;
 
-                case Token::TOKEN_ID:
+                case Token::TOKEN_ID: case Token::TOKEN_STRING:
                 {
-                    Grammar::IDCALL();
+                    Grammar::PARAMVAL();
                     CONDNEXT();
                 } break;
 
@@ -1012,7 +1031,7 @@ class GrammarInst {
             return false;
         }
     public:
-        static int ARR_MATHOP[];
+        static int ARR_OPMATH[];
         static int ARR_RWFUNC[];
 
         static void RWFUNC() {
