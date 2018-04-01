@@ -516,17 +516,17 @@ class Grammar {
             return false;
         }
 
-        static bool isopbin(int tokenKey) {
+        static bool isopbin(int key) {
             for(int i=0; i<N_OPBIN; i++) {
-                if(ARR_OPBIN[i] == tokenKey)
+                if(ARR_OPBIN[i] == key)
                     return true;
             }
             return false;
         }
 
-        static bool isopnum(int tokenKey) {
+        static bool isopnum(int key) {
             for(int i=0; i<N_OPNUM; i++) {
-                if(ARR_OPNUM[i] == tokenKey)
+                if(ARR_OPNUM[i] == key)
                     return true;
             }
             return false;
@@ -598,11 +598,11 @@ class Grammar {
 
         static void CONDNOT() {
             cout << "deriving from CONDNOT\n";
-            int tokenKey = currentToken.get_key();
+            int key = currentToken.get_key();
 
-            if(tokenKey == Token::TOKEN_ID) {
+            if(key == Token::TOKEN_ID) {
                 Grammar::ID();
-            } else if(tokenKey == Token::TOKEN_PAR_IZQ) {
+            } else if(key == Token::TOKEN_PAR_IZQ) {
                 INITCOND();
             } else {
                 int expToks[] = {Token::TOKEN_ID, Token::TOKEN_PAR_IZQ};
@@ -612,9 +612,9 @@ class Grammar {
 
         static void ID() {  
             cout << "deriving from ID: \n";
-            int tokenKey = currentToken.get_key();
-            if(tokenKey == Token::TOKEN_ID) {
-                followup(tokenKey);
+            int key = currentToken.get_key();
+            if(key == Token::TOKEN_ID) {
+                followup(key);
                 IDNEXT();
             } else {
                 int expToks[] = {Token::TOKEN_ID};
@@ -682,9 +682,9 @@ class Grammar {
 
         static void INITCOND() {
             cout << "deriving from COND\n";
-            int tokenKey = currentToken.get_key();
+            int key = currentToken.get_key();
 
-            switch(tokenKey) {
+            switch(key) {
                 case Token::RWORD_TRUE: case Token::RWORD_FALSE:
                 {
                     TFVAL();
@@ -697,11 +697,11 @@ class Grammar {
                     INITCONDNEXT();
                 } break;
 
-                case Token::TOKEN_INT:
+                case Token::TOKEN_INT: case Token::TOKEN_FLOAT:
                 {
-                    Grammar::followup(Token::TOKEN_INT);
+                    INITMATH();
                     OPNUM();
-                    Grammar::PARAMVAL();
+                    INITMATH();
                 } break;
 
                 case Token::TOKEN_NOT:
@@ -728,18 +728,18 @@ class Grammar {
 
 
         static void INITCONDNEXT() {
-            cout << "deriving from CONDNEXT\n";
-            int tokenKey = currentToken.get_key();
+            cout << "deriving from INITCONDNEXT\n";
+            int key = currentToken.get_key();
 
-            if(isopbin(tokenKey)) {
+            if(isopbin(key)) {
                 OPBIN();
-                INITCOND();
-            } else if(isopnum(tokenKey)) {
+                PARAMVAL();
+            } else if(isopnum(key)) {
                 OPNUM();
-                Grammar::PARAMVAL();
-            } else if(tokenKey == Token::TOKEN_NEW_LINE) {
-                Grammar::followup(Token::TOKEN_NEW_LINE);
-            } else if(tokenKey == Token::TOKEN_PAR_DER) {
+                PARAMVAL();
+            } else if(key == Token::TOKEN_NEW_LINE) {
+                followup(Token::TOKEN_NEW_LINE);
+            } else if(key == Token::TOKEN_PAR_DER) {
                 return;
             } else {
                 // TODO: incomplete report
@@ -748,20 +748,8 @@ class Grammar {
             }
         }
 
-        static void INITMATHNEXT() {
-            int key = currentToken.get_key();
-
-            if(ismathop(key)) {
-                MATHOP();
-                INITMATH();
-            } else if(key == Token::TOKEN_COMMA || key == Token::TOKEN_PAR_DER) {
-                return;
-            } else {
-                catch_error_sintactico(ARR_OPMATH, N_OPMATH);
-            }
-        }
-
-        static void INITMATH() {    // TODO: can't begin with IDs so far
+        static void INITMATH() {
+            cout << "deriving from INITMATH\n";
             int key = currentToken.get_key();
 
             if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_ID) {
@@ -774,6 +762,20 @@ class Grammar {
             } else {
                 int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT};
                 catch_error_sintactico(exptoks,3);
+            }
+        }
+
+        static void INITMATHNEXT() {
+            cout << "deriving from INITMATHNEXT\n";
+            int key = currentToken.get_key();
+
+            if(ismathop(key)) {
+                MATHOP();
+                INITMATH();
+            } else if(key == Token::TOKEN_COMMA || key == Token::TOKEN_PAR_DER || isopnum(key) || isopbin(key) ) {
+                return;
+            } else {
+                catch_error_sintactico(ARR_OPMATH, N_OPMATH);
             }
         }
 
@@ -801,9 +803,9 @@ class Grammar {
 
         static void OPBIN() {
             cout << "deriving from OPBIN: \n";
-            int tokenKey = currentToken.get_key();
-            if(isopbin(tokenKey)) {
-                Grammar::followup(tokenKey);
+            int key = currentToken.get_key();
+            if(isopbin(key)) {
+                Grammar::followup(key);
             } else {
                 catch_error_sintactico(ARR_OPBIN, N_OPBIN);
             }
@@ -811,9 +813,9 @@ class Grammar {
 
         static void OPNUM() {
             cout << "deriving from OPNUM: \n";
-            int tokenKey = currentToken.get_key();
-            if(isopnum(tokenKey)) {
-                Grammar::followup(tokenKey);
+            int key = currentToken.get_key();
+            if(isopnum(key)) {
+                Grammar::followup(key);
             } else {
                 catch_error_sintactico(ARR_OPNUM, N_OPNUM);
             }
@@ -857,7 +859,7 @@ class Grammar {
             int key = currentToken.get_key();
             
             if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
-                NUMBER();
+                INITMATH();
                 STATIDNEXT();
             } else if(key == Token::TOKEN_STRING
                 || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE) {
@@ -909,10 +911,10 @@ class Grammar {
         }
 
         static void TFVAL() {
-            int tokenKey = currentToken.get_key();
+            int key = currentToken.get_key();
 
-            if(tokenKey == Token::RWORD_TRUE || tokenKey == Token::RWORD_FALSE) {
-                Grammar::followup(tokenKey);
+            if(key == Token::RWORD_TRUE || key == Token::RWORD_FALSE) {
+                Grammar::followup(key);
                 TFNEXT();
             } else {
                 int expToks[] = {Token::RWORD_TRUE, Token::RWORD_FALSE};
@@ -921,11 +923,11 @@ class Grammar {
         }
 
         static void TFNEXT() {
-            int tokenKey = currentToken.get_key();
+            int key = currentToken.get_key();
 
-            if(tokenKey == Token::TOKEN_PAR_DER) {  // FIXME: this feels wrong
+            if(key == Token::TOKEN_PAR_DER) {  // FIXME: this feels wrong
                 return;
-            } else if(isopbin(tokenKey)) {
+            } else if(isopbin(key)) {
                 OPBIN();
                 INITCOND();
             } else {
@@ -978,9 +980,9 @@ class GrammarIf {
     public:
         static void IF() {
             cout << "deriving from IF\n";
-            int tokenKey = currentToken.get_key();
+            int key = currentToken.get_key();
 
-            if(tokenKey == Token::RWORD_IF) {
+            if(key == Token::RWORD_IF) {
                 Grammar::followup(Token::RWORD_IF);
                 Grammar::followup(Token::TOKEN_PAR_IZQ);
                 Grammar::INITCOND();
