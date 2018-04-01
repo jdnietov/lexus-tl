@@ -538,7 +538,6 @@ class Grammar {
             return false;
         }
 
-
         static bool isparamval(int key) {
             return key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_STRING
                 || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE || key == Token::TOKEN_ID;
@@ -568,8 +567,14 @@ class Grammar {
             } else if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
                 NUMBER();
                 COMPNEXT();
-            } if(key == Token::TOKEN_COR_IZQ) {
+            } else if(key == Token::TOKEN_LLAVE_IZQ) {
+                STRUCT();
+            } else if(key == Token::TOKEN_COR_IZQ) {
                 ARRAY();
+            } else {
+                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT,
+                    Token::TOKEN_LLAVE_IZQ, Token::TOKEN_COR_IZQ};
+                catch_error_sintactico(exptoks, 5);
             }
         }
 
@@ -659,6 +664,51 @@ class Grammar {
             }
         }
 
+        static void FIELD() {
+            cout << "deriving from FIELD\n";
+            int key = currentToken.get_key();
+            
+            if(key == Token::TOKEN_ID) {
+                followup(Token::TOKEN_ID);
+                followup(Token::TOKEN_DOS_PUNTOS);
+                PARAMVAL();
+            } else {
+                int exptoks[] = {Token::TOKEN_ID};
+                catch_error_sintactico(exptoks, 1);
+            }
+        }
+
+        static void FIELDS() {
+            cout << "deriving from FIELDS\n";
+            int key = currentToken.get_key();
+            
+            if(key == Token::TOKEN_ID) {
+                FIELD();
+                FIELDNEXT();
+            } else if(key == Token::TOKEN_LLAVE_DER) {
+                return;
+            } else {
+                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_LLAVE_DER};
+                catch_error_sintactico(exptoks,2);
+            }
+        }
+
+        static void FIELDNEXT() {
+            cout << "deriving from FIELDNEXT\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_COMMA) {
+                followup(Token::TOKEN_COMMA);
+                FIELDS();
+            } else if(key == Token::TOKEN_LLAVE_DER) {
+                return;
+            } else {
+                int exptoks[] = {Token::TOKEN_COMMA, Token::TOKEN_LLAVE_DER};
+                catch_error_sintactico(exptoks,2);
+            }
+
+        }
+
         static void ID() {  
             cout << "deriving from ID\n";
             int key = currentToken.get_key();
@@ -715,19 +765,6 @@ class Grammar {
                 followup(Token::TOKEN_COR_IZQ);
                 IDX();
                 followup(Token::TOKEN_COR_DER);
-            }
-        }
-
-        static void IDNUMBER() {
-            int key = currentToken.get_key();
-
-            if(key == Token::TOKEN_ID) {
-                IDCALL();
-            } else if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
-                NUMBER();
-            } else {
-                int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT, Token::TOKEN_FLOAT};
-                catch_error_sintactico(exptoks,3);
             }
         }
 
@@ -982,6 +1019,20 @@ class Grammar {
                 INITCONDNEXT();
             } else {
                 // TODO: report
+            }
+        }
+
+        static void STRUCT() {
+            cout << "deriving from STRUCT\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_LLAVE_IZQ) {
+                followup(Token::TOKEN_LLAVE_IZQ);
+                FIELDS();
+                followup(Token::TOKEN_LLAVE_DER);
+            } else {
+                int exptoks[] = {Token::TOKEN_LLAVE_IZQ};
+                catch_error_sintactico(exptoks, 1);
             }
         }
 
