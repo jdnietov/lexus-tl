@@ -27,7 +27,7 @@ class Token {
         int col;
         
     public:
-        static const int N_TOKENS = 49;
+        static const int N_TOKENS = 50;
         static const int N_RWORDS = 33;
 
         // FIXME: potential inconsistencies with this key model
@@ -80,6 +80,7 @@ class Token {
         static const int RWORD_TODO = 47;
         static const int RWORD_NIL = 48;
         static const int RWORD_LEER = 49;
+        static const int TOKEN_EOF = 49;
 
         static const int T_OP = 1;
         static const int T_LEX = 2;
@@ -117,6 +118,9 @@ class Token {
         int get_col() {
             return col;
         }
+        string get_lex() {
+            return lexeme;
+        }
         
     private:    // TODO
         static const string T[];
@@ -135,7 +139,7 @@ const string Token::TOKNAMES [Token::N_TOKENS] = {
     "token_reserved_word", "token_integer", "token_float",
     // reserved words
     "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
-    "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer"
+    "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer", "EOF"
 };
 
 Token::Token() {
@@ -280,6 +284,16 @@ void catch_error_lexico() {
     exit(EXIT_FAILURE);
 }
 
+bool tl_getline() {
+    if(getline(cin, global_line)) {
+        global_line+='\n';
+        global_col_it = 1;
+        global_line_it++;
+        return true;
+    }
+    return false;
+}
+
 Token get_next_token() {
     Token token;
     string buffer = "";
@@ -315,6 +329,7 @@ Token get_next_token() {
                     {
                         Token op(Token::T_OP, Token::get_op_key(c), global_line_it, ncol);
                         global_col_it = ncol+1;
+                        if(c == '\n')   tl_getline();
                         return op;
                     }
                     break;
@@ -343,13 +358,9 @@ Token get_next_token() {
                             catch_error_lexico();
                         }
                         
-                        if(op.get_key() != -1) {
-                            global_state = ESTADO_INICIAL;
-                            global_col_it = ncol+1;
-                            return op;
-                        } else {
-                            cout << "*** ERROR: operand t_key is not defined, somehow? like, how the fuck did this happen?\n";
-                        }
+                        global_state = ESTADO_INICIAL;
+                        global_col_it = ncol+1;
+                        return op;
                     }
                     break;
                     
@@ -471,30 +482,17 @@ Token get_next_token() {
     return token;
 }
 
-bool tl_getline() {
-    if(getline(cin, global_line)) {
-        global_line+='\n';
-        global_col_it = 1;
-        return true;
-    }
-    return false;
-}
-
 int main (int argc, char *argv[]) {
     global_state = ESTADO_INICIAL;
-    global_line_it = 1;
-    queue<Token> tokens;
-    
-    while ( tl_getline() ) {
+    global_line_it = 0;
+    Token token;
 
-        while(global_col_it > 0 && global_col_it <= global_line.length()) {
-            Token token = get_next_token();
-            if(global_state == ESTADO_INICIAL)
-                token.print();
-        }
-        global_line_it++;
+    tl_getline();
+    while((token = get_next_token()).get_class() > 0) {
+        token.print();
     }
-    
+    cout << "finished\n";
+    cout << int(global_line[0]) << '\n';
     if(global_state != ESTADO_INICIAL)
         catch_error_lexico();
 

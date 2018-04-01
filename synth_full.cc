@@ -46,7 +46,7 @@ class Token {
         int col;
         
     public:
-        static const int N_TOKENS = 49;
+        static const int N_TOKENS = 50;
         static const int N_RWORDS = 33;
 
         static const int TOKEN_LLAVE_IZQ = 1;   // {
@@ -98,6 +98,7 @@ class Token {
         static const int RWORD_TODO = 47;
         static const int RWORD_NIL = 48;
         static const int RWORD_LEER = 49;
+        static const int TOKEN_EOF = 50;
 
         static const int T_OP = 1;
         static const int T_LEX = 2;
@@ -154,7 +155,7 @@ const string Token::TOKNAMES [Token::N_TOKENS] = {
     "token_reserved_word", "token_integer", "token_float",
     // reserved words
     "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
-    "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer"
+    "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer", "EOF"
 };
 
 const string Token::TOKNSTRS [Token::N_TOKENS] = {
@@ -163,7 +164,7 @@ const string Token::TOKNSTRS [Token::N_TOKENS] = {
     "valor_string", "identificador", "ERROR", "valor_entero", "valor_float",
     // TODO: don't repeat data!
     "log", "false", "true", "importar", "for", "if", "funcion", "retorno",
-    "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer"
+    "end", "while", "elif", "else", "in", "desde", "todo", "nil", "leer", "EOF"
 };
 
 Token::Token() {
@@ -300,6 +301,16 @@ void catch_error_lexico() {
     exit(EXIT_FAILURE);
 }
 
+bool tl_getline() {
+    if(getline(cin, global_line)) {
+        global_line+='\n';
+        global_col_it = 1;
+        global_line_it++;
+        return true;
+    }
+    return false;
+}
+
 Token get_next_token() {
     Token token;
     string buffer = "";
@@ -309,8 +320,15 @@ Token get_next_token() {
         char c = global_line[ncol-1];
         //cout << "char: " << c << ", estado: " << global_state << ", buffer: " << buffer << ", ncol: " << ncol << "\n";
 
-        if(c == '#')
-            break;
+        if(c == '#') {
+            Token tok(Token::T_OP, Token::TOKEN_NEW_LINE, global_line_it, ncol);
+            return tok;
+        }
+        //cout << int(c) << '\n';
+        if(int(c) == 4) {
+            Token end(Token::T_OP, Token::TOKEN_EOF, global_line_it, ncol);
+            return end;
+        }
         
         string str_buffer = "";
         switch(global_state) {
@@ -332,6 +350,7 @@ Token get_next_token() {
                     {
                         Token op(Token::T_OP, Token::get_op_key(c), global_line_it, ncol);
                         global_col_it = ncol+1;
+                        if(c == '\n')   tl_getline();
                         return op;
                     } break;
                     
@@ -561,12 +580,9 @@ class Grammar {
             cout << "deriving from ASSIGNVAL\n";
             int key = currentToken.get_key();
 
-            if(key == Token::TOKEN_ID) {
-                IDCALL();
-                COMPNEXT();
-            } else if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
-                NUMBER();
-                COMPNEXT();
+            if(key == Token::TOKEN_ID || key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT
+                || key == Token::TOKEN_STRING) {
+                PARAMVAL();
             } else if(key == Token::TOKEN_LLAVE_IZQ) {
                 STRUCT();
             } else if(key == Token::TOKEN_COR_IZQ) {
@@ -778,6 +794,23 @@ class Grammar {
             } else {
                 int exptoks[] = {Token::TOKEN_ID, Token::TOKEN_INT};
                 catch_error_sintactico(exptoks, 2);
+            }
+        }
+
+        static void IMPORT() {
+            int key = currentToken.get_key();
+
+            if(key == Token::RWORD_IMPORTAR) {
+                Grammar::followup(Token::RWORD_IMPORTAR);
+                Grammar::ID();
+            } else if(key == Token::RWORD_DESDE) {
+                Grammar::followup(Token::RWORD_DESDE);
+                Grammar::ID();
+                Grammar::followup(Token::RWORD_IMPORTAR);
+                Grammar::ID();
+            } else {
+                int exptoks[] = {Token::RWORD_IMPORTAR};
+                catch_error_sintactico(exptoks, 1);
             }
         }
 
@@ -1067,8 +1100,12 @@ class Grammar {
 
         static void followup(int expectedKey) {
             if(currentToken.get_key() == expectedKey) {
-                //while((currentToken = get_next_token()).get_key() == Token::TOKEN_NEW_LINE);
                 currentToken = get_next_token();
+                cout << currentToken.get_key();
+                if(currentToken.get_key() < 1) {
+                    Token token(Token::T_OP, Token::TOKEN_EOF, global_line_it, global_col_it);
+                    currentToken = token;
+                }
                 cout << "OK\n\n";
                 currentToken.print();
             } else {
@@ -1095,31 +1132,6 @@ int Grammar::ARR_OPBIN[Grammar::N_OPBIN] = {
 int Grammar::ARR_OPNUM[Grammar::N_OPNUM] = {
     Token::TOKEN_MAYOR_IG, Token::TOKEN_MENOR, Token::TOKEN_MENOR_IG,
     Token::TOKEN_IGUAL_NUM, Token::TOKEN_DIFF_NUM, Token::TOKEN_MAYOR
-};
-
-//
-// ─── IMPORTING ──────────────────────────────────────────────────────────────────
-//
-
-    
-class GrammarImport {
-    public:
-        static void IMPORT() {
-            int key = currentToken.get_key();
-
-            if(key == Token::RWORD_IMPORTAR) {
-                Grammar::followup(Token::RWORD_IMPORTAR);
-                Grammar::ID();
-            } else if(key == Token::RWORD_DESDE) {
-                Grammar::followup(Token::RWORD_DESDE);
-                Grammar::ID();
-                Grammar::followup(Token::RWORD_IMPORTAR);
-                Grammar::ID();
-            } else {
-                int exptoks[] = {Token::RWORD_IMPORTAR};
-                catch_error_sintactico(exptoks, 1);
-            }
-        }
 };
 
 //
@@ -1165,7 +1177,7 @@ class GrammarInst {
             } else if(Grammar::ismathop(key)) {
                 Grammar::MATHOP();
                 Grammar::PARAMVAL();
-            } else if(key == Token::TOKEN_NEW_LINE || key == Token::TOKEN_PAR_DER) {   // FIXME: still wrong
+            } else if(key == Token::TOKEN_NEW_LINE || key == Token::TOKEN_PAR_DER || Token::TOKEN_EOF) {   // FIXME: still wrong
                 return;
             } else {
                 int exptoks[] = {Token::TOKEN_PAR_IZQ, Token::TOKEN_POINT, Token::TOKEN_NEW_LINE};
@@ -1191,7 +1203,9 @@ class GrammarInst {
                 RWFUNC();
                 Grammar::CALL();
             } else if(key == Token::RWORD_IMPORTAR || key == Token::RWORD_DESDE) {
-                GrammarImport::IMPORT();
+                Grammar::IMPORT();
+            } else if(key == Token::TOKEN_NEW_LINE) {
+                Grammar::followup(Token::TOKEN_NEW_LINE);
             } else {
                 int exptoks[] = {-1};   // TODO: actual values
                 catch_error_sintactico(exptoks, 1);
@@ -1202,12 +1216,15 @@ class GrammarInst {
             cout << "deriving from INSTS\n";
             int key = currentToken.get_key();
 
-            if(key != Token::TOKEN_NEW_LINE) {
+            if(key != Token::TOKEN_EOF && key != Token::TOKEN_NEW_LINE) {
                 INST();
                 INSTS();
-            } else {
+            } else if(key == Token::TOKEN_NEW_LINE) {
                 cout << "new line\n";
                 Grammar::followup(Token::TOKEN_NEW_LINE);
+                INSTS();
+            } else {
+                return;
             }
         }
 };
@@ -1271,34 +1288,17 @@ int GrammarInst::ARR_RWFUNC[] = {
     Token::RWORD_LEER, Token::RWORD_LOG
 };
 
-bool tl_getline() {
-    if(getline(cin, global_line)) {
-        global_line+='\n';
-        global_col_it = 1;
-        return true;
-    }
-    return false;
-}
-
 int main (int argc, char *argv[]) {
     global_state = ESTADO_INICIAL;
-    global_line_it = 1;
+    global_line_it = 0;
     
-    while ( tl_getline () ) {
-
-        while(global_col_it > 0 && global_col_it <= global_line.length()) {
-            currentToken = get_next_token();
-            if(global_state == ESTADO_INICIAL) {
-                cout << '\n';
-                currentToken.print();
-                GrammarProgram::PROGRAM();
-                cout << "done.\n************\n";
-            }
-        }
-        global_line_it++;
-    }
+    tl_getline();
+    currentToken = get_next_token();
+    GrammarProgram::PROGRAM();
+    cout << "El analisis sintactico ha finalizado correctamente.\n";
 
     if(global_state != ESTADO_INICIAL) {
+        cout << "finished at state " << global_state << '\n'; 
         --global_line_it;
         catch_error_lexico();
     }
