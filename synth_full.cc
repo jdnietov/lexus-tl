@@ -496,7 +496,7 @@ void catch_error_sintactico(int *expectedTokens, int size) {
 
 class Grammar {
     private:
-        static const int N_OPMATH = 7;
+        static const int N_OPMATH = 6;
         static int ARR_OPMATH[N_OPMATH];
 
         static const int N_OPSTRCMP = 2;
@@ -536,6 +536,21 @@ class Grammar {
         static bool isparamval(int key) {
             return key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_STRING
                 || key == Token::RWORD_TRUE || key == Token::RWORD_FALSE || key == Token::TOKEN_ID;
+        }
+
+        static void ASSIGNVAL() {
+            cout << "deriving from ASSIGNVAL\n";
+            int key = currentToken.get_key();
+
+            if(key == Token::TOKEN_ID) {
+                ID();
+            } else if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
+                NUMBER();
+            } else if(key == Token::TOKEN_COR_IZQ) {
+                followup(Token::TOKEN_COR_IZQ);
+                PARAMS();
+                followup(Token::TOKEN_COR_DER);
+            }
         }
 
         static void CALL() {
@@ -629,7 +644,8 @@ class Grammar {
                 ID();
                 IDCALLNEXT();
             } else {
-                // TODO:
+                int exptoks[] = {Token::TOKEN_ID};
+                catch_error_sintactico(exptoks, 1);
             }
         }
 
@@ -772,8 +788,9 @@ class Grammar {
             if(ismathop(key)) {
                 MATHOP();
                 INITMATH();
-            } else if(key == Token::TOKEN_COMMA || key == Token::TOKEN_PAR_DER || isopnum(key) || isopbin(key) ) {
-                return;
+            } else if(key == Token::TOKEN_COMMA || key == Token::TOKEN_PAR_DER 
+                || isopnum(key) || isopbin(key) || key == Token::TOKEN_COR_DER) {
+                return; // FIXME: probably just a return will do?
             } else {
                 catch_error_sintactico(ARR_OPMATH, N_OPMATH);
             }
@@ -954,7 +971,7 @@ class Grammar {
 
 int Grammar::ARR_OPMATH[Grammar::N_OPMATH] = {
     Token::TOKEN_MAS, Token::TOKEN_MENOS, Token::TOKEN_MUL, Token::TOKEN_DIV,
-    Token::TOKEN_POT, Token::TOKEN_MOD, Token::TOKEN_ASSIGN
+    Token::TOKEN_POT, Token::TOKEN_MOD
 };
 
 int Grammar::ARR_OPSTRCMP[Grammar::N_OPSTRCMP] = {
@@ -1056,6 +1073,9 @@ class GrammarInst {
 
             if(key == Token::TOKEN_PAR_IZQ) {
                 Grammar::CALL();
+            } else if(key == Token::TOKEN_ASSIGN) {
+                Grammar::followup(Token::TOKEN_ASSIGN);
+                Grammar::ASSIGNVAL();
             } else if(Grammar::ismathop(key)) {
                 Grammar::MATHOP();
                 Grammar::PARAMVAL();
