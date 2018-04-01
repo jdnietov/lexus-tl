@@ -362,9 +362,15 @@ Token get_next_token() {
 
                     case '.':
                     {
-                        global_state = ESTADO_FLOAT;
-                        icol = ncol;
-                        buffer = "0.";
+                        if(is_number(global_line[ncol])) {
+                            global_state = ESTADO_FLOAT;
+                            icol = ncol;
+                            buffer = "0.";
+                        } else {                        
+                            global_col_it = ncol+1;
+                            Token pnt(Token::T_OP, Token::TOKEN_POINT, global_line_it, ncol);
+                            return pnt;
+                        }
                     } break;
                     
                     default:

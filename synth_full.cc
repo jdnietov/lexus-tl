@@ -376,9 +376,15 @@ Token get_next_token() {
                     
                     case '.':
                     {
-                        global_state = ESTADO_FLOAT;
-                        icol = ncol;
-                        buffer = "0.";
+                        if(is_number(global_line[ncol])) {
+                            global_state = ESTADO_FLOAT;
+                            icol = ncol;
+                            buffer = "0.";
+                        } else {                        
+                            global_col_it = ncol+1;
+                            Token pnt(Token::T_OP, Token::TOKEN_POINT, global_line_it, ncol);
+                            return pnt;
+                        }
                     } break;
 
                     default:
@@ -557,13 +563,13 @@ class Grammar {
             int key = currentToken.get_key();
 
             if(key == Token::TOKEN_ID) {
-                ID();
+                IDCALL();
+                COMPNEXT();
             } else if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT) {
                 NUMBER();
-            } else if(key == Token::TOKEN_COR_IZQ) {
-                followup(Token::TOKEN_COR_IZQ);
-                PARAMS();
-                followup(Token::TOKEN_COR_DER);
+                COMPNEXT();
+            } if(key == Token::TOKEN_COR_IZQ) {
+                ARRAY();
             }
         }
 
@@ -623,6 +629,20 @@ class Grammar {
                 int exptoks[] = {Token::TOKEN_PAR_IZQ};
                 catch_error_sintactico(exptoks, 1);
             }
+        }
+
+        static void COMPNEXT() {
+            cout << "deriving from COMPNEXT\n";
+            int key = currentToken.get_key();
+
+            if(ismathop(key)) {
+                INITMATHNEXT();
+            } else if(isopbin(key) || isopnum(key)) {
+                INITCONDNEXT();
+            } else if(key == Token::TOKEN_NEW_LINE) {
+                return;
+            }
+            
         }
 
         static void CONDNOT() {
@@ -808,8 +828,11 @@ class Grammar {
             cout << "deriving from INITMATH\n";
             int key = currentToken.get_key();
 
-            if(key == Token::TOKEN_INT || key == Token::TOKEN_FLOAT || key == Token::TOKEN_ID) {
-                IDNUMBER();
+            if(key == Token::TOKEN_ID) {
+                IDCALL();
+                INITMATHNEXT();
+            } else if(key == Token::TOKEN_FLOAT || key == Token::TOKEN_INT) {
+                NUMBER();
                 INITMATHNEXT();
             } else if(key == Token::TOKEN_PAR_IZQ) {
                 followup(Token::TOKEN_PAR_IZQ);
@@ -828,12 +851,7 @@ class Grammar {
             if(ismathop(key)) {
                 MATHOP();
                 INITMATH();
-            } else if(key == Token::TOKEN_COMMA || key == Token::TOKEN_PAR_DER 
-                || isopnum(key) || isopbin(key) || key == Token::TOKEN_COR_DER) {
-                return; // FIXME: probably just a return will do?
-            } else {
-                catch_error_sintactico(ARR_OPMATH, N_OPMATH);
-            }
+            } else return;  // TODO: this is pretty risky
         }
 
         static void MATHOP() {
@@ -1129,14 +1147,12 @@ class GrammarInst {
             } 
         }
         
-
         static void INSTS() {
             cout << "deriving from INSTS\n";
             int key = currentToken.get_key();
 
             if(key != Token::TOKEN_NEW_LINE) {
                 INST();
-                cout << "next\n";
                 INSTS();
             } else {
                 cout << "new line\n";
@@ -1204,18 +1220,20 @@ int GrammarInst::ARR_RWFUNC[] = {
     Token::RWORD_LEER, Token::RWORD_LOG
 };
 
-/**
- * TODO: COUNTEREXAMPLES NOT COVERED YET:
- * - "lala" (solitary identifiers)
- * */
+bool tl_getline() {
+    if(getline(cin, global_line)) {
+        global_line+='\n';
+        global_col_it = 1;
+        return true;
+    }
+    return false;
+}
+
 int main (int argc, char *argv[]) {
     global_state = ESTADO_INICIAL;
     global_line_it = 1;
     
-    while ( getline (cin,global_line) ) {
-        global_line+='\n';
-        global_col_it = 1;
-        // cout << global_line << '\n';
+    while ( tl_getline () ) {
 
         while(global_col_it > 0 && global_col_it <= global_line.length()) {
             currentToken = get_next_token();
