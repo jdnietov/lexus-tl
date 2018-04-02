@@ -110,6 +110,7 @@ class Token {
         Token(int cla, int key, string lex, int lin, int co);
         
         void print();
+        string str();
         static int get_op_key(char c);
         static int get_op_comp_key(string c);
         static int get_res_word_key(string word);
@@ -203,8 +204,17 @@ string Token::get_key_name(int key) {
     return (key > 0 && key <= Token::N_TOKENS) ? Token::TOKNAMES[--key] : "ERROR_TKN";
 }
 
+string Token::str() {
+    if(t_key == Token::TOKEN_ID || t_key == Token::TOKEN_INT || t_key == Token::TOKEN_FLOAT) {
+        return lexeme;
+    } else if(t_key == Token::TOKEN_STRING) {
+        return "\"" + lexeme + "\"";
+    } else return (t_key > 0 && t_key <= Token::N_TOKENS) ? 
+        Token::TOKNSTRS[--t_key] : "ERROR_STR";
+}
+
 string Token::get_key_str(int key) {
-    return (key > 0 && key <= Token::N_TOKENS) ? Token::TOKNSTRS[--key] : "ERROR_STR";
+    return (key > 0 && key <= Token::N_TOKENS) ? Token::TOKNSTRS[--key] : "ERROR_TKN";
 }
 
 int Token::get_op_comp_key(string s) {
@@ -519,9 +529,9 @@ Token get_next_token() {
 //
 
 void catch_error_sintactico(int *expectedTokens, int size) {
-    cout << '<' << global_line_it << ':' << --global_col_it << "> Error sintactico."
-        << " Encontrado: \'" << Token::get_key_str(currentToken.get_key())
-        << "'; se esperaba: ";
+    cout << '<' << currentToken.get_line() << ':' << currentToken.get_col() 
+        << "> Error sintactico. Encontrado: \'" 
+        << currentToken.str() << "'; se esperaba: ";
     
     // order lexicographically
     sort(expectedTokens, expectedTokens + size);    // FIXME: not sorting!
@@ -663,50 +673,6 @@ class Grammar {
             if(key == Token::TOKEN_PAR_IZQ) {
                 followup(Token::TOKEN_PAR_IZQ);
                 PARAMS();
-                followup(Token::TOKEN_PAR_DER);
-            } else {
-                int exptoks[] = {Token::TOKEN_PAR_IZQ};
-                catch_error_sintactico(exptoks, 1);
-            }
-        }
-
-        static void CALLIDLISTNEXT() {
-            cout << "CALLIDLISTNEXT -> ";
-            int key = currentToken.get_key();
-
-            if(key == Token::TOKEN_COMMA) {
-                followup(Token::TOKEN_COMMA);
-                followup(Token::TOKEN_ID);
-            } else if(key == Token::TOKEN_PAR_DER) {
-                return;
-            } else {
-                int exptoks[] = {Token::TOKEN_PAR_DER, Token::TOKEN_COMMA};
-                catch_error_sintactico(exptoks, 2);
-            }
-        }
-
-        static void CALLIDLIST() {
-            cout << "CALLIDLIST -> ";
-            int key = currentToken.get_key();
-
-            if(key == Token::TOKEN_PAR_DER) {
-                return;
-            } else if(key == Token::TOKEN_ID) {
-                followup(Token::TOKEN_ID);
-                CALLIDLISTNEXT();
-            } else {
-                int exptoks[] = {Token::TOKEN_PAR_DER, Token::TOKEN_ID};
-                catch_error_sintactico(exptoks, 2);
-            }
-        }
-
-        static void CALLIDS() {
-            cout << "CALLIDS -> ";
-            int key = currentToken.get_key();
-
-            if(key == Token::TOKEN_PAR_IZQ) {
-                followup(Token::TOKEN_PAR_IZQ);
-                CALLIDLIST();
                 followup(Token::TOKEN_PAR_DER);
             } else {
                 int exptoks[] = {Token::TOKEN_PAR_IZQ};
@@ -938,9 +904,7 @@ class Grammar {
                 followup(Token::TOKEN_ID);
                 IDNEXT();
             } else if(key == Token::TOKEN_COR_IZQ) {
-                followup(Token::TOKEN_COR_IZQ);
-                IDX();
-                followup(Token::TOKEN_COR_DER);
+                ARRAY();
             }
         }
 
@@ -1248,6 +1212,9 @@ class Grammar {
                 followup(Token::TOKEN_PAR_IZQ);
                 STAT();
                 followup(Token::TOKEN_PAR_DER);
+            } else if(key == Token::TOKEN_NEW_LINE) {
+                followup(Token::TOKEN_NEW_LINE);
+                PARAMS();
             }
         }
 
@@ -1260,6 +1227,12 @@ class Grammar {
                 PARAMS();
             } else if(key == Token::TOKEN_PAR_DER) {
                 return;
+            } else if(key == Token::TOKEN_NEW_LINE) {
+                followup(Token::TOKEN_NEW_LINE);
+                PARAMSNEXT();
+            } else {
+                int exptoks[] = {Token::TOKEN_PAR_DER};
+                catch_error_sintactico(exptoks, 1);
             }
         }
 
