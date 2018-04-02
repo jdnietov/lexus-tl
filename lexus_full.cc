@@ -324,8 +324,8 @@ Token get_next_token() {
                     
                     // one-character operators
                     case '{': case '}': case '[': case ']': case '(':
-                    case ')': case '+': case '-': case '*': case '/': 
-                    case '%': case '^': case ':': case ',': case '\n':
+                    case ')': case '+': case '*': case '/': case '%':
+                    case '^': case ':': case ',': case '\n':
                     {
                         Token op(Token::T_OP, Token::get_op_key(c), global_line_it, ncol);
                         global_col_it = ncol+1;
@@ -380,6 +380,21 @@ Token get_next_token() {
                         } else {                        
                             global_col_it = ncol+1;
                             Token pnt(Token::T_OP, Token::TOKEN_POINT, global_line_it, ncol);
+                            return pnt;
+                        }
+                    } break;
+
+                    case '-':
+                    {
+                        if((ncol-2<0) || 
+                            ((ncol-2>=0) && !is_number(global_line[ncol-2]) 
+                            && !is_letter(global_line[ncol-2]))) {
+                            global_state = ESTADO_INT;
+                            icol = ncol;
+                            buffer = "-";
+                        } else {
+                            global_col_it = ncol+1;
+                            Token pnt(Token::T_OP, Token::TOKEN_MENOS, global_line_it, ncol);
                             return pnt;
                         }
                     } break;
