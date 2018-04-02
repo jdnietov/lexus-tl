@@ -419,17 +419,26 @@ Token get_next_token() {
 
                     case '-':
                     {
-                        if((ncol-2<0) || 
-                            ((ncol-2>=0) && !is_number(global_line[ncol-2]) 
-                            && !is_letter(global_line[ncol-2]))) {
-                            global_state = ESTADO_INT;
-                            icol = ncol;
-                            buffer = "-";
-                        } else {
-                            global_col_it = ncol+1;
-                            Token pnt(Token::T_OP, Token::TOKEN_MENOS, global_line_it, ncol);
-                            return pnt;
+                        char cx;
+                        int auxcol = ncol-2;
+                        while(auxcol >= 0) {
+                            cx = global_line[auxcol];
+                            if(is_number(cx) || is_letter(cx)) {
+                                global_col_it = ncol+1;
+                                //cout << "new char: " << global_line[global_col_it-1] << '\n';
+                                Token menos(Token::T_OP, Token::TOKEN_MENOS, global_line_it, ncol);
+                                global_state = ESTADO_INICIAL;
+                                return menos;
+                            } else if(c != ' ') {
+                                global_state = ESTADO_INT;
+                                icol = ncol;
+                                buffer = "-";
+                            }
+                            auxcol--;
                         }
+                        global_state = ESTADO_INT;
+                        icol = ncol;
+                        buffer = "-";
                     } break;
                     
                     default:
@@ -1079,6 +1088,9 @@ class Grammar {
             if(ismathop(key)) {
                 MATHOP();
                 INITMATH();
+            } else if(isopnum(key)) {
+                OPNUM();
+                INITMATH();
             } else {
                 return;
             }
@@ -1225,7 +1237,7 @@ class Grammar {
             if(key == Token::TOKEN_COMMA) {
                 followup(Token::TOKEN_COMMA);
                 PARAMS();
-            } else if(key == Token::TOKEN_PAR_DER) {
+            } else if(key == Token::TOKEN_PAR_DER || key == Token::TOKEN_COR_DER) {
                 return;
             } else if(key == Token::TOKEN_NEW_LINE) {
                 followup(Token::TOKEN_NEW_LINE);
