@@ -396,11 +396,7 @@ Token get_next_token() {
                                 Token menos(Token::T_OP, Token::TOKEN_MENOS, global_line_it, ncol);
                                 global_state = ESTADO_INICIAL;
                                 return menos;
-                            } else if(c != ' ') {
-                                global_state = ESTADO_INT;
-                                icol = ncol;
-                                buffer = "-";
-                            }
+                            } else if(cx != ' ')    break;
                             auxcol--;
                         }
                         global_state = ESTADO_INT;
@@ -515,8 +511,7 @@ int main (int argc, char *argv[]) {
     while((token = get_next_token()).get_class() > 0) {
         token.print();
     }
-    cout << "finished\n";
-    cout << int(global_line[0]) << '\n';
+    //cout << "finished\n";
     if(global_state != ESTADO_INICIAL)
         catch_error_lexico();
 
