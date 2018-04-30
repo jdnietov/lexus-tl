@@ -220,7 +220,7 @@ string Token::trad() {
         case Token::TOKEN_INT:
             return lexeme;
         case Token::TOKEN_NOT:
-            return "not";
+            return "not ";
         case Token::TOKEN_OR:
             return "or";
         case Token::TOKEN_AND:
