@@ -241,6 +241,8 @@ string Token::trad() {
             return "print";
         case Token::RWORD_RETORNO:
             return "return";
+        case Token::RWORD_LEER:
+            return "input";
         default:
             return this->str();
     }
@@ -1527,8 +1529,14 @@ class Grammar {
             string trad = "";
 
             if(isrwfunc(key)) {
-                trad += followup(key);
-                trad += CALL();
+                string tradKey = "", tradCall = "";
+                tradKey = followup(key);
+                tradCall = CALL();
+                if(key == Token::RWORD_LEER) {
+                    string id = tradCall.substr(1, tradCall.length()-2);
+                    trad = id + "=" + tradKey + "()";
+                }
+            } else if(key == Token::RWORD_LEER) {
             } else {
                 catch_error_sintactico(ARR_RWFUNC, N_RWFUNC);
             }
